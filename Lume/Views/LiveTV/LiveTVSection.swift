@@ -44,12 +44,12 @@ enum LiveTVSection: Identifiable, Hashable {
         }
     }
 
-    /// SF Symbol shown beside the virtual collections; nil for plain categories.
+    /// SF Symbol shown beside a category or virtual collection.
     var icon: String? {
         switch self {
         case .favorites: "heart.fill"
         case .recentlyWatched: "clock.arrow.circlepath"
-        case .category: nil
+        case .category: "folder"
         }
     }
 
@@ -79,6 +79,14 @@ enum LiveTVSection: Identifiable, Hashable {
         case .category: false
         }
     }
+}
+
+/// One IPTV provider's categories as they appear in the shared Live TV browser.
+struct LiveTVCategoryGroup: Identifiable {
+    let id: String
+    let title: String
+    let isLocked: Bool
+    let sections: [LiveTVSection]
 }
 
 // MARK: - Scope
@@ -300,8 +308,8 @@ nonisolated enum LiveChannelQuery {
 
 // MARK: - Category memo
 
-/// Memo for the rail's category sections, held by the browse screen for as long
-/// as it lives.
+/// Memo for provider-grouped category sections, held by the browse screen for
+/// as long as it lives.
 ///
 /// Filtering the live categories by playlist prefix and viewer restriction and
 /// then sorting them is cheap once and expensive 25 times: the sort alone reads
@@ -318,21 +326,42 @@ nonisolated enum LiveChannelQuery {
 @MainActor
 final class LiveTVCategoryMemo {
     private var key = ""
-    private var cached: [LiveTVSection] = []
+    private var cached: [LiveTVCategoryGroup] = []
 
-    func sections(
+    func groups(
         categories: [Category],
-        playlistPrefix: String,
+        playlists: [Playlist],
+        isPremium: Bool,
         sort: CategorySortOption,
         restriction: ContentRestriction
-    ) -> [LiveTVSection] {
-        // No active playlist: the rail has no categories to show, exactly as
-        // when the filter below found none.
-        guard !playlistPrefix.isEmpty else { return [] }
-        let key = Self.key(categories: categories, playlistPrefix: playlistPrefix, sort: sort, restriction: restriction)
+    ) -> [LiveTVCategoryGroup] {
+        let providers = playlists
+            .filter { $0.sourceType.canCarryLiveChannels }
+            .sorted { ($0.addedAt, $0.id.uuidString) < ($1.addedAt, $1.id.uuidString) }
+        let key = Self.key(
+            categories: categories,
+            playlists: providers,
+            isPremium: isPremium,
+            sort: sort,
+            restriction: restriction
+        )
         guard key != self.key else { return cached }
-        let visible = LiveChannelQuery.visibleCategories(categories, playlistPrefix: playlistPrefix, restriction: restriction)
-        cached = sort.sort(visible).map(LiveTVSection.category)
+        cached = providers.compactMap { playlist in
+            let prefix = "\(playlist.id.uuidString)-"
+            let visible = LiveChannelQuery.visibleCategories(
+                categories,
+                playlistPrefix: prefix,
+                restriction: restriction
+            )
+            let sections = sort.sort(visible).map(LiveTVSection.category)
+            guard !sections.isEmpty else { return nil }
+            return LiveTVCategoryGroup(
+                id: playlist.id.uuidString,
+                title: playlist.name,
+                isLocked: playlists.isLocked(playlist, isPremium: isPremium),
+                sections: sections
+            )
+        }
         self.key = key
         return cached
     }
@@ -348,7 +377,8 @@ final class LiveTVCategoryMemo {
     /// comparison rather than once per category.
     private static func key(
         categories: [Category],
-        playlistPrefix: String,
+        playlists: [Playlist],
+        isPremium: Bool,
         sort: CategorySortOption,
         restriction: ContentRestriction
     ) -> String {
@@ -360,7 +390,13 @@ final class LiveTVCategoryMemo {
             hasher.combine(category.customOrder)
             hasher.combine(category.sortOrder)
         }
-        return "\(playlistPrefix)|\(sort.rawValue)|\(restriction.visibilityToken)|\(hasher.finalize())"
+        for playlist in playlists {
+            hasher.combine(playlist.id)
+            hasher.combine(playlist.name)
+            hasher.combine(playlist.addedAt)
+        }
+        hasher.combine(isPremium)
+        return "\(sort.rawValue)|\(restriction.visibilityToken)|\(hasher.finalize())"
     }
 }
 

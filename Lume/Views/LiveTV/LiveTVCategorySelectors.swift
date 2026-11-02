@@ -2,10 +2,9 @@
 //  LiveTVCategorySelectors.swift
 //  Lume
 //
-//  How the viewer picks which collection of live channels to browse: the macOS
-//  sidebar list and the iOS button-plus-searchable-sheet. Split out of
-//  `LiveTVView` to keep that file focused on cross-platform composition (and
-//  inside the project's file-length cap).
+//  How the viewer picks a Live TV collection: provider-grouped sidebars on
+//  macOS/tvOS and the iOS button-plus-searchable-sheet. Split out of
+//  `LiveTVView` to keep that file focused on cross-platform composition.
 //
 
 import SwiftData
@@ -15,48 +14,68 @@ import SwiftUI
 
 struct CategorySidebar: View {
     let sections: [LiveTVSection]
+    let categoryGroups: [LiveTVCategoryGroup]
     @Binding var selectedSection: LiveTVSection?
 
     var body: some View {
-        List(sections) { section in
-            let isSelected = selectedSection?.id == section.id
-            Button {
-                selectedSection = section
-            } label: {
-                HStack(spacing: 8) {
-                    if let icon = section.icon {
-                        Image(systemName: icon)
-                            .font(.subheadline)
-                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                    }
-                    section.titleText
-                        .font(.headline)
-                        .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-                    Spacer()
-                }
-                .contentShape(Rectangle())
+        List {
+            ForEach(sections.filter(\.isVirtual)) { section in
+                sectionRow(section)
             }
-            .buttonStyle(.plain)
-            .listRowBackground(
-                isSelected
-                    ? Color.accentColor.opacity(0.15)
-                    : Color.clear
-            )
+            ForEach(categoryGroups) { group in
+                Section {
+                    ForEach(group.sections) { section in
+                        sectionRow(section)
+                    }
+                } header: {
+                    groupHeader(group)
+                }
+            }
         }
-        #if !os(tvOS)
-        .listStyle(.sidebar)
-        #endif
+        .listStyle(.plain)
+    }
+
+    private func sectionRow(_ section: LiveTVSection) -> some View {
+        let isSelected = selectedSection?.id == section.id
+        return Button {
+            selectedSection = section
+        } label: {
+            HStack(spacing: 8) {
+                if let icon = section.icon {
+                    Image(systemName: icon)
+                        .font(.subheadline)
+                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                }
+                section.titleText
+                    .font(.headline)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+    }
+
+    private func groupHeader(_ group: LiveTVCategoryGroup) -> some View {
+        HStack(spacing: 6) {
+            Text(group.title)
+            if group.isLocked {
+                Image(systemName: "crown.fill")
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 
 // MARK: - iOS Category Bar
 
 #if os(iOS)
-    /// iOS category selector. A horizontal pill strip is unscannable once a
-    /// playlist syncs hundreds of categories, so the current section is shown as a
-    /// single button that opens a searchable list of every section instead.
+    /// iOS category selector. The current section is shown as a single button
+    /// that opens a searchable, provider-grouped list of all available sections.
     struct CategoryBar: View {
         let sections: [LiveTVSection]
+        let categoryGroups: [LiveTVCategoryGroup]
         @Binding var selectedSection: LiveTVSection?
 
         @State private var showingPicker = false
@@ -93,9 +112,13 @@ struct CategorySidebar: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .background(.bar)
+            .background(Color(uiColor: .secondarySystemBackground))
             .sheet(isPresented: $showingPicker) {
-                CategoryPickerSheet(sections: sections, selectedSection: $selectedSection)
+                CategoryPickerSheet(
+                    sections: sections,
+                    categoryGroups: categoryGroups,
+                    selectedSection: $selectedSection
+                )
             }
 
             Divider()
@@ -107,58 +130,106 @@ struct CategorySidebar: View {
     /// at the top while the search field is empty.
     private struct CategoryPickerSheet: View {
         let sections: [LiveTVSection]
+        let categoryGroups: [LiveTVCategoryGroup]
         @Binding var selectedSection: LiveTVSection?
 
         @Environment(\.dismiss) private var dismiss
         @State private var query = ""
 
-        private var filteredSections: [LiveTVSection] {
+        private var filteredVirtualSections: [LiveTVSection] {
             let trimmed = query.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { return sections }
-            return sections.filter { $0.title.localizedCaseInsensitiveContains(trimmed) }
+            return sections.filter {
+                $0.isVirtual && (trimmed.isEmpty || $0.title.localizedCaseInsensitiveContains(trimmed))
+            }
+        }
+
+        private var filteredGroups: [LiveTVCategoryGroup] {
+            let trimmed = query.trimmingCharacters(in: .whitespaces)
+            return categoryGroups.compactMap { group in
+                let matchingSections = group.sections.filter {
+                    trimmed.isEmpty || $0.title.localizedCaseInsensitiveContains(trimmed)
+                }
+                guard !matchingSections.isEmpty else { return nil }
+                return LiveTVCategoryGroup(
+                    id: group.id,
+                    title: group.title,
+                    isLocked: group.isLocked,
+                    sections: matchingSections
+                )
+            }
+        }
+
+        private var hasResults: Bool {
+            !filteredVirtualSections.isEmpty || !filteredGroups.isEmpty
         }
 
         var body: some View {
             NavigationStack {
-                List(filteredSections) { section in
-                    let isSelected = selectedSection?.id == section.id
-                    Button {
-                        selectedSection = section
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 12) {
-                            if let icon = section.icon {
-                                Image(systemName: icon)
-                                    .foregroundStyle(.secondary)
+                List {
+                    ForEach(filteredVirtualSections) { section in
+                        sectionRow(section)
+                    }
+                    ForEach(filteredGroups) { group in
+                        Section {
+                            ForEach(group.sections) { section in
+                                sectionRow(section)
                             }
-                            section.titleText
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.tint)
+                        } header: {
+                            HStack(spacing: 6) {
+                                Text(group.title)
+                                if group.isLocked {
+                                    Image(systemName: "crown.fill")
+                                        .accessibilityHidden(true)
+                                }
                             }
                         }
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color(uiColor: .systemBackground))
                 .overlay {
-                    if filteredSections.isEmpty {
+                    if !hasResults {
                         ContentUnavailableView.search(text: query)
                     }
                 }
                 .searchable(text: $query, prompt: "Search categories")
                 .navigationTitle("Categories")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(Color(uiColor: .systemBackground), for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .presentationBackground(Color(uiColor: .systemBackground))
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }
                     }
                 }
             }
+        }
+
+        private func sectionRow(_ section: LiveTVSection) -> some View {
+            let isSelected = selectedSection?.id == section.id
+            return Button {
+                selectedSection = section
+                dismiss()
+            } label: {
+                HStack(spacing: 12) {
+                    if let icon = section.icon {
+                        Image(systemName: icon)
+                            .foregroundStyle(.secondary)
+                    }
+                    section.titleText
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.tint)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 #endif

@@ -2,9 +2,8 @@
 //  TVCategoryRail.swift
 //  Lume
 //
-//  The tvOS Live TV category sidebar: the shared glass rail listing the
-//  virtual collections and the provider's categories, beside the channel list
-//  or guide.
+//  The tvOS Live TV category sidebar: virtual collections followed by each
+//  IPTV provider's categories, beside the channel list or guide.
 //
 
 #if os(tvOS)
@@ -14,9 +13,11 @@
     /// the Recordings entry, then the provider's categories.
     struct TVCategoryRail: View {
         let sections: [LiveTVSection]
+        let categoryGroups: [LiveTVCategoryGroup]
         @Binding var selectedSection: LiveTVSection?
         /// Fired when the user activates (clicks) a category.
         var onCategoryActivated: () -> Void = {}
+        var onRefreshAll: () -> Void = {}
         /// The Recordings entry, below the virtual collections and above the
         /// first category; nil hides it.
         var recordings: TVCategoryRailRecordingsEntry?
@@ -24,18 +25,25 @@
         @Environment(TVLiveTVFocusRegions.self) private var focusRegions: TVLiveTVFocusRegions?
 
         var body: some View {
-            TVSidebarRail(items: items, selectedID: selectedID) { isFocused in
+            TVSidebarRail(items: items, selectedID: selectedID, usesGlass: false) { isFocused in
                 if let focusRegions, focusRegions.railFocused != isFocused {
                     focusRegions.railFocused = isFocused
                 }
             }
         }
 
-        /// Visual order is focus order: Favorites and Recently Watched
-        /// (whichever exist), Recordings, then the provider's categories.
+        /// Visual order is focus order: virtual collections, Recordings, then
+        /// categories grouped under each IPTV provider.
         private var items: [TVSidebarRailItem] {
             let pinnedCount = sections.prefix(while: \.isVirtual).count
-            var items = sections.prefix(pinnedCount).map(categoryItem)
+            var items = [TVSidebarRailItem(
+                id: "lume.liveSection.refreshAll",
+                title: Text("Refresh All"),
+                icon: "arrow.clockwise",
+                iconLeading: true,
+                action: onRefreshAll
+            )]
+            items += sections.prefix(pinnedCount).map(categoryItem)
             if let recordings {
                 items.append(TVSidebarRailItem(
                     id: TVCategoryRailRecordingsEntry.id,
@@ -44,7 +52,16 @@
                     action: recordings.onActivate
                 ))
             }
-            items += sections.dropFirst(pinnedCount).map(categoryItem)
+            for group in categoryGroups {
+                items.append(TVSidebarRailItem(
+                    id: "provider-header-\(group.id)",
+                    title: Text(group.title),
+                    icon: group.isLocked ? "crown.fill" : nil,
+                    isHeader: true,
+                    action: {}
+                ))
+                items += group.sections.map(categoryItem)
+            }
             return items
         }
 
@@ -55,7 +72,7 @@
         }
 
         private func categoryItem(_ section: LiveTVSection) -> TVSidebarRailItem {
-            TVSidebarRailItem(id: section.id, title: section.titleText, icon: section.icon) {
+            TVSidebarRailItem(id: section.id, title: section.titleText, icon: section.icon, iconLeading: true) {
                 selectedSection = section
                 onCategoryActivated()
             }

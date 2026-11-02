@@ -150,6 +150,43 @@ struct EPGSourceTests {
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<EPGListing>()) == 1)
     }
 
+    @Test func `guide refresh preserves existing listings when any source download fails`() async throws {
+        let xmltv = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <tv>
+          <programme start="20260611120000 +0000" stop="20260611130000 +0000" channel="news.1">
+            <title>New Listing</title>
+          </programme>
+        </tv>
+        """
+        let guide = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).xml")
+        try Data(xmltv.utf8).write(to: guide)
+        defer { try? FileManager.default.removeItem(at: guide) }
+
+        let container = try makeTestContainer()
+        let context = ModelContext(container)
+        let playlist = Playlist(name: "P", serverURL: "http://host:8080", username: "u", password: "p")
+        context.insert(playlist)
+        context.insert(LiveStream(id: "\(playlist.id.uuidString)-live-1", streamId: 1, name: "News", epgChannelId: "news.1"))
+        context.insert(EPGSource(name: "Available", url: guide.absoluteString))
+        context.insert(EPGSource(name: "Unavailable", url: ""))
+        context.insert(EPGListing(
+            id: "old-listing",
+            channelId: "news.1",
+            title: "Existing Listing",
+            listingDescription: "",
+            start: .now,
+            end: .now.addingTimeInterval(3600)
+        ))
+        try context.save()
+
+        let synced = await EPGSyncManager(modelContainer: container).syncAllSources()
+        let listings = try ModelContext(container).fetch(FetchDescriptor<EPGListing>())
+        #expect(!synced)
+        #expect(listings.count == 1)
+        #expect(listings.first?.title == "Existing Listing")
+    }
+
     // MARK: - EPG schedule
 
     @Test func `epg default frequency is daily`() {

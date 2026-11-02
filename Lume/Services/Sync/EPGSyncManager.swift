@@ -32,8 +32,9 @@ actor EPGSyncManager {
         self.client = client
     }
 
-    /// Refreshes the guide from every enabled source. Returns `true` when at
-    /// least one source synced successfully.
+    /// Refreshes the guide from every enabled source. Returns `true` when all
+    /// sources downloaded and at least one source was ingested. If any download
+    /// fails, the existing listings are left untouched.
     ///
     /// - Parameter lockedPlaylistIDs: playlists the free plan locks (see
     ///   `[Playlist].isLocked`). Their linked sources are skipped — the guide
@@ -69,7 +70,9 @@ actor EPGSyncManager {
                 try? FileManager.default.removeItem(at: download.fileURL)
             }
         }
-        guard !downloads.isEmpty, !Task.isCancelled else {
+        // The store is global: rebuilding it from only the sources that happened
+        // to download would silently erase listings owned by a failed source.
+        guard !Task.isCancelled, downloads.count == sources.count else {
             for download in downloads {
                 markStatus(download.source.id, .idle)
             }

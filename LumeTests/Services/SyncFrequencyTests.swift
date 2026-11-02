@@ -325,6 +325,16 @@ struct SyncFrequencyTests {
         #expect(!gate.isRefreshOwed)
     }
 
+    @Test func `completed manual guide refresh clears owed batch refresh`() {
+        var gate = EPGRefreshGate()
+        gate.contentSyncStarted()
+        #expect(!gate.request())
+        gate.contentSyncFinished(succeeded: true)
+        gate.clearRefreshOwed()
+        #expect(!gate.isRefreshOwed)
+        #expect(!gate.takeOwedRefresh())
+    }
+
     @Test func `epg refresh waits for the auto-sync queue and runs once it drains`() {
         var gate = EPGRefreshGate()
         gate.isAutoSyncQueued = true

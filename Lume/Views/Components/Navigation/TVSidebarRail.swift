@@ -2,9 +2,9 @@
 //  TVSidebarRail.swift
 //  Lume
 //
-//  The tvOS glass sidebar beside a content pane — Live TV's categories and
-//  Settings' categories. Moving focus only highlights a row; Select runs it.
-//  Focus entering the rail always lands on the selected row.
+//  The tvOS sidebar beside a content pane — Live TV's categories and Settings'
+//  categories. Moving focus only highlights a row; Select runs it. Focus
+//  entering the rail always lands on the selected row.
 //
 
 #if os(tvOS)
@@ -16,9 +16,13 @@
         let title: Text
         /// Trails the title; nil leaves the row without one.
         var icon: String?
+        /// Places the icon before the title instead of trailing it.
+        var iconLeading = false
         /// Replaces the symbol's default VoiceOver name when the icon carries
         /// meaning of its own, such as a warning badge.
         var iconAccessibilityLabel: Text?
+        /// A non-focusable label separating groups of selectable rows.
+        var isHeader = false
         let action: () -> Void
     }
 
@@ -33,6 +37,9 @@
         let items: [TVSidebarRailItem]
         /// The row that reads as selected, and the one entry snaps to.
         let selectedID: String?
+        /// Whether the panel uses Liquid Glass. Live TV opts out; other rails
+        /// retain their existing appearance.
+        var usesGlass = true
         /// Bumped to move focus onto the selected row from outside the rail —
         /// Menu from the content pane, or an entry catcher.
         var focusRequest = 0
@@ -78,7 +85,7 @@
         }
 
         private var itemIDs: [String] {
-            items.map(\.id)
+            items.filter { !$0.isHeader }.map(\.id)
         }
 
         var body: some View {
@@ -106,9 +113,15 @@
             }
             .frame(width: Self.width, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .top)
-            .background(panelShape.fill(.white.opacity(0.06)))
-            .glassEffectCompat(.regular, in: panelShape)
-            .overlay(panelShape.strokeBorder(.white.opacity(0.12), lineWidth: 1))
+            .background {
+                if usesGlass {
+                    panelShape.fill(.white.opacity(0.06))
+                        .glassEffectCompat(.regular, in: panelShape)
+                } else {
+                    panelShape.fill(Color(.sRGB, red: 49 / 255, green: 53 / 255, blue: 72 / 255))
+                }
+            }
+            .overlay(panelShape.strokeBorder(.white.opacity(usesGlass ? 0.12 : 0.2), lineWidth: 1))
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { panelFrame = $0 }
             .onChange(of: itemIDs) { _, ids in
                 // The focused row went away under focus (an entry turned off
@@ -215,7 +228,24 @@
 
         private var rows: some View {
             ForEach(items) { item in
-                railButton(item)
+                if item.isHeader {
+                    HStack(spacing: 8) {
+                        item.title
+                            .lineLimit(1)
+                        if let icon = item.icon {
+                            Image(systemName: icon)
+                                .font(.caption)
+                        }
+                    }
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.58))
+                    .padding(.horizontal, rowInset)
+                    .padding(.top, 18)
+                    .padding(.bottom, 6)
+                    .accessibilityAddTraits(.isHeader)
+                } else {
+                    railButton(item)
+                }
             }
         }
 
@@ -231,6 +261,9 @@
                 // Labels start flush at the row's edge; an icon trails, so
                 // every label lines up whether or not its row has one.
                 HStack(spacing: 16) {
+                    if item.iconLeading, let icon = item.icon {
+                        railIcon(icon, accessibilityLabel: item.iconAccessibilityLabel)
+                    }
                     // One line at one size: long provider category names
                     // truncate rather than wrap, so every row keeps the same
                     // height.
@@ -242,7 +275,7 @@
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Spacer(minLength: 0)
-                    if let icon = item.icon {
+                    if !item.iconLeading, let icon = item.icon {
                         railIcon(icon, accessibilityLabel: item.iconAccessibilityLabel)
                     }
                 }

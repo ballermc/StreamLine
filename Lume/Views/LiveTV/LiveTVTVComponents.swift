@@ -310,9 +310,11 @@
     /// Settings › Player › Live TV.
     struct TVLiveTVScreen: View {
         let sections: [LiveTVSection]
+        let categoryGroups: [LiveTVCategoryGroup]
         @Binding var selectedSection: LiveTVSection?
         let displayedSection: LiveTVSection?
         let contentSort: ContentSortOption
+        let onRefreshAll: () -> Void
         let onPlay: (LiveStream) -> Void
         let onPlayCatchup: (LiveStream, EPGProgramCell) -> Void
         /// Raises Multi-View seeded with a channel, from its long-press menu.
@@ -362,7 +364,9 @@
                 // `EPGGuideView` (and re-run its grid build) on every keypress.
                 TVCategoryRail(
                     sections: sections,
+                    categoryGroups: categoryGroups,
                     selectedSection: $selectedSection,
+                    onRefreshAll: onRefreshAll,
                     onCategoryActivated: {
                         showsRecordings = false
                         guideFocusToken += 1

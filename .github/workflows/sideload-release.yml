@@ -1,26 +1,11 @@
 name: Sideload Release
 
 on:
-  release:
-    types: [published]
-  # Manual re-run against an existing release tag — e.g. when a runner-side
-  # build issue (missing Metal toolchain, transient SPM checkout) failed the
-  # original release-triggered run. Builds the tagged code and attaches the
-  # sideload assets to that release without re-cutting or moving the tag.
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to (re)build sideload assets for (e.g. v1.2.0)
+        description: Git tag/version to build sideload assets for (e.g. v1.2.0)
         required: true
-      engine_ref:
-        description: LumeEngine ref to build against (defaults to the pinned version)
-        required: false
-      recorder_ref:
-        description: LumeRecorder ref to build against (defaults to the pinned version)
-        required: false
-      cloud_ref:
-        description: LumeCloud ref to build against (defaults to the pinned version)
-        required: false
 
 # The build jobs attach assets to the release, which requires write access to
 # repo contents. The default GITHUB_TOKEN is read-only when the repo's default
@@ -29,10 +14,9 @@ on:
 permissions:
   contents: write
 
-# Resolved once and shared by every step (incl. checkout ref). On a release
-# event this is the published tag; on manual dispatch it's the input.
+# Resolved once and shared by every step, including the checkout ref.
 env:
-  RELEASE_TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
+  RELEASE_TAG: ${{ inputs.tag }}
   # LumeEngine (the beta 4th playback engine) is referenced by the project as a
   # *local* SPM package at ../LumeEngine, so the sibling repo has to exist on the
   # runner or `xcodebuild archive` dies at "Could not resolve package
@@ -41,13 +25,13 @@ env:
   # Pinned rather than tracking the engine's main: app↔engine commits are paired
   # by hand, so a drifting engine would break this archive with no change on
   # Lume's side. Bump this when a release needs newer engine code.
-  ENGINE_REF: ${{ github.event.inputs.engine_ref || 'v0.4.0' }}
+  ENGINE_REF: v0.4.0
   # LumeRecorderKit (the DVR client) is the same story: a local package at
   # ../LumeRecorder/Kit, pinned to the LumeRecorder tag the app was built with.
-  RECORDER_REF: ${{ github.event.inputs.recorder_ref || 'v0.1.1' }}
+  RECORDER_REF: v0.1.1
   # LumeCloudKit (the Lume Cloud sync client) likewise: a local package at
   # ../LumeCloud/LumeCloudKit. Tracks main until LumeCloud cuts its first tag.
-  CLOUD_REF: ${{ github.event.inputs.cloud_ref || 'main' }}
+  CLOUD_REF: main
 
 jobs:
   build:
@@ -209,4 +193,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          draft: true
           files: ${{ runner.temp }}/Lume-${{ env.RELEASE_TAG }}-${{ matrix.platform }}-Sideload.${{ matrix.format }}

@@ -4,8 +4,8 @@
 //
 //  Owns the background EPG refresh task and publishes whether one is running,
 //  for the EPG settings screen. Singleton because it must outlive any one view
-//  and be reachable from launch, the content-sync completion hook, and the
-//  manual "Sync Now" button.
+//  and be reachable from launch, content-sync completion hooks, and manual
+//  refresh actions.
 //
 
 import Foundation
@@ -23,8 +23,9 @@ import SwiftData
 /// briefly blocked, failing the sync's next requests too). So the gate is fed
 /// the real state from the places that own it, rather than predicting which
 /// sync is about to start: `MainTabView` reports whether its auto-sync queue
-/// holds anything, and `SyncProgressView` — the one place any content sync
-/// runs — reports each start and finish.
+/// holds anything, `SyncProgressView` reports individual manual syncs, and
+/// `RefreshAllProgressView` holds a batch gate through its catalog and guide
+/// refreshes.
 struct EPGRefreshGate {
     /// Content syncs running right now, automatic or manual.
     private(set) var runningContentSyncs = 0
@@ -70,6 +71,10 @@ struct EPGRefreshGate {
         isRefreshOwed = false
         return true
     }
+
+    mutating func clearRefreshOwed() {
+        isRefreshOwed = false
+    }
 }
 
 @Observable
@@ -77,6 +82,7 @@ final class EPGSyncService {
     static let shared = EPGSyncService()
 
     private(set) var isSyncing = false
+    private(set) var lastSyncSucceeded = false
 
     private var container: ModelContainer?
     private var task: Task<Void, Never>?
@@ -100,6 +106,23 @@ final class EPGSyncService {
     /// schedule or any in-flight content sync.
     func syncNow() {
         kick()
+    }
+
+    /// Starts a manual guide refresh and waits for the result. Any background
+    /// refresh already in flight is cancelled first; a queued refresh is held
+    /// by the caller's content-sync batch until this one completes.
+    func syncNowAndWait() async -> Bool {
+        if let current = task {
+            if isBackgroundRefresh {
+                current.cancel()
+            }
+            await current.value
+        }
+        guard !Task.isCancelled else { return false }
+        kick()
+        guard let current = task else { return false }
+        await current.value
+        return lastSyncSucceeded
     }
 
     /// Background trigger (launch): refreshes only if the guide is stale per
@@ -156,6 +179,14 @@ final class EPGSyncService {
         runOwedRefresh()
     }
 
+    /// Ends a coordinated refresh-all operation after its manual EPG pass. The
+    /// pass has already paid any refresh debt raised while playlist syncs ran.
+    func contentSyncBatchDidFinish() {
+        gate.contentSyncFinished(succeeded: false)
+        gate.clearRefreshOwed()
+        runOwedRefresh()
+    }
+
     private func runOwedRefresh() {
         // `container` first: taking the debt before `configure` would drop it.
         guard container != nil, task == nil, gate.takeOwedRefresh() else { return }
@@ -196,6 +227,7 @@ final class EPGSyncService {
     private func kick(background: Bool = false) {
         guard let container, task == nil else { return }
         isSyncing = true
+        lastSyncSucceeded = false
         isBackgroundRefresh = background
         let manager = EPGSyncManager(modelContainer: container)
         let playlists = (try? ModelContext(container).fetch(FetchDescriptor<Playlist>())) ?? []
@@ -213,6 +245,7 @@ final class EPGSyncService {
                 EPGSyncSchedule.lastSyncDate = Date()
                 EPGSyncSchedule.schemaVersion = SyncFrequency.epgCurrentSchemaVersion
             }
+            lastSyncSucceeded = succeeded
             isSyncing = false
             task = nil
             Logger.database.info("EPG refresh finished (success: \(succeeded))")
