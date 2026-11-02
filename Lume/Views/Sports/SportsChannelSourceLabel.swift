@@ -16,7 +16,7 @@ struct SportsChannelSourceLabel: View {
     private var text: String? {
         let playlist = channel.stream.playlistName
         let category = channel.stream.categoryName
-        switch (playlist, category) {
+        return switch (playlist, category) {
         case let (.some(playlist), .some(category)):
             String(localized: "Playlist: \(playlist) · Category: \(category)")
         case let (.some(playlist), nil):
@@ -24,7 +24,7 @@ struct SportsChannelSourceLabel: View {
         case let (nil, .some(category)):
             String(localized: "Category: \(category)")
         case (nil, nil):
-            return nil
+            nil
         }
     }
 
