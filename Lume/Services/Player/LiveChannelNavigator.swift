@@ -163,8 +163,8 @@ nonisolated enum LiveChannelNavigator {
         var currentDescriptor = FetchDescriptor<LiveStream>(predicate: #Predicate { $0.id == id })
         currentDescriptor.fetchLimit = 1
         guard let current = try? context.fetch(currentDescriptor).first,
-              let playlist = playlist(for: current, in: context) else { return nil }
-        let prefix = media.channelScopePrefix ?? "\(playlist.id.uuidString)-"
+              let currentPlaylist = playlist(for: current, in: context) else { return nil }
+        let prefix = media.channelScopePrefix ?? "\(currentPlaylist.id.uuidString)-"
 
         guard let located = ring(
             around: current,

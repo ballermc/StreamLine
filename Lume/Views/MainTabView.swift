@@ -64,7 +64,7 @@ struct MainTabView: View {
     /// A tab remains available when at least one unlocked source enables it.
     private func showsTab(_ tab: AppTab) -> Bool {
         playlists.unlocked().contains(where: { (playlist: Playlist) in
-            playlist.showsTab(tab)
+            Optional(playlist).showsTab(tab)
         })
     }
 
