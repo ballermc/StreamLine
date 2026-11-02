@@ -119,6 +119,16 @@ jobs:
       - name: Download Metal Toolchain
         run: xcodebuild -downloadComponent MetalToolchain
 
+      - name: Resolve app version
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be three numeric components, optionally prefixed with v (for example v3.0.1)."
+            exit 1
+          fi
+          echo "MARKETING_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Building app version $VERSION"
+
       # ── Inject API key secrets (optional) ───────────────────────────────────
       # Features degrade gracefully when absent (see Scripts/inject-env.sh).
       - name: Write .env
@@ -161,7 +171,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            ENABLE_HARDENED_RUNTIME=NO
+            ENABLE_HARDENED_RUNTIME=NO \
+            MARKETING_VERSION="$MARKETING_VERSION"
 
       # ── Package: IPA (iOS / tvOS) ────────────────────────────────────────────
       # An IPA is a zip with Payload/<AppName>.app at its root.
