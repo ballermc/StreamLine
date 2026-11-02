@@ -24,7 +24,7 @@ struct SportsChannelSourceLabel: View {
         case let (nil, .some(category)):
             String(localized: "Category: \(category)")
         case (nil, nil):
-            nil
+            return nil
         }
     }
 
