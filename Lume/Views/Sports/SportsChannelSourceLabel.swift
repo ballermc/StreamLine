@@ -6,9 +6,14 @@ struct SportsChannelSourceLabel: View {
 
     var body: some View {
         if let text {
-            SportsOverflowText(text: text)
-                .font(.caption2)
+            Text(verbatim: text)
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(.quaternary, in: Capsule())
                 .accessibilityLabel(Text(verbatim: accessibilityText))
         }
     }
@@ -18,11 +23,11 @@ struct SportsChannelSourceLabel: View {
         let category = channel.stream.categoryName
         return switch (playlist, category) {
         case let (.some(playlist), .some(category)):
-            String(localized: "Playlist: \(playlist) · Category: \(category)")
+            "\(playlist) · \(category)"
         case let (.some(playlist), nil):
-            String(localized: "Playlist: \(playlist)")
+            playlist
         case let (nil, .some(category)):
-            String(localized: "Category: \(category)")
+            category
         case (nil, nil):
             nil
         }

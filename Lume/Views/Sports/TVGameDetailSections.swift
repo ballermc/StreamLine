@@ -56,10 +56,11 @@
             HStack(spacing: 10) {
                 SportsOverflowText(text: channel.stream.name)
                     .font(.system(size: 28, weight: .semibold))
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 if let badge = sportsQualityBadge(from: channel.stream.name) {
                     Text(verbatim: badge)
                         .font(.system(size: 18, weight: .bold))
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(.white.opacity(0.18), in: Capsule())
                 }

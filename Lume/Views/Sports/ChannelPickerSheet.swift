@@ -142,11 +142,12 @@ struct SportsChannelLabel: View {
     private var nameLine: some View {
         HStack(spacing: 6) {
             SportsOverflowText(text: channel.stream.name)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 .font(.subheadline.weight(.medium))
             if let badge = sportsQualityBadge(from: channel.stream.name) {
                 Text(verbatim: badge)
                     .font(.caption2.weight(.bold))
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 4)
                     .padding(.vertical, 1)
                     .background(.quaternary, in: Capsule())
             }
