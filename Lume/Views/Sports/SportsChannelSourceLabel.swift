@@ -11,8 +11,8 @@ struct SportsChannelSourceLabel: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
                 .background(.quaternary, in: Capsule())
                 .accessibilityLabel(Text(verbatim: accessibilityText))
         }
@@ -42,6 +42,7 @@ struct SportsChannelSourceLabel: View {
 /// label remains highlighted for five seconds.
 struct SportsOverflowText: View {
     let text: String
+    var lineHeight: CGFloat = 17
 
     @State private var contentWidth: CGFloat = 0
     @State private var isHovering = false
@@ -49,7 +50,6 @@ struct SportsOverflowText: View {
     @Environment(\.isFocused) private var isFocused
 
     private let gap: CGFloat = 32
-    private let lineHeight: CGFloat = 17
     private let pointsPerSecond: CGFloat = 28
 
     var body: some View {

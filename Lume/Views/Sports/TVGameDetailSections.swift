@@ -31,7 +31,7 @@
             Button(action: onPlay) {
                 HStack(spacing: 22) {
                     ChannelLogo(urlString: channel.stream.streamIcon, size: 56)
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 10) {
                         name
                         subtitle
                         SportsChannelSourceLabel(channel: channel)
@@ -40,7 +40,7 @@
                     Image(systemName: "play.circle.fill").font(.system(size: 40))
                 }
                 .padding(.horizontal, 32)
-                .padding(.vertical, 22)
+                .padding(.vertical, 30)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -54,7 +54,7 @@
 
         private var name: some View {
             HStack(spacing: 10) {
-                SportsOverflowText(text: channel.stream.name)
+                SportsOverflowText(text: channel.stream.name, lineHeight: 34)
                     .font(.system(size: 28, weight: .semibold))
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 if let badge = sportsQualityBadge(from: channel.stream.name) {

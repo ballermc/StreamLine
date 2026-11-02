@@ -127,7 +127,7 @@ struct SportsChannelLabel: View {
     var isLastWatched = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 6) {
             nameLine
             subtitleLine
             SportsChannelSourceLabel(channel: channel)
