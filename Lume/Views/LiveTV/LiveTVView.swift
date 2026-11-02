@@ -102,6 +102,7 @@ struct LiveTVView: View {
 
     /// The channel detail area for the selected section, using the playlist that
     /// owns its category and honouring the current layout mode.
+    @ViewBuilder
     private func detail(for section: LiveTVSection) -> some View {
         let playlist = playlist(for: section)
         let prefix = playlist.map { "\($0.id.uuidString)-" } ?? ""
@@ -315,6 +316,7 @@ struct LiveTVView: View {
         /// One shape for both modes: the category sidebar on the leading edge
         /// beside the content area, which shows either the channel list or the
         /// programme guide (picked in Settings › Player › Live TV).
+        @ViewBuilder
         private func tvOSLayout(
             sections: [LiveTVSection],
             categoryGroups: [LiveTVCategoryGroup],

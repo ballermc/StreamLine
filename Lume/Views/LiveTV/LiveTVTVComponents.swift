@@ -366,11 +366,11 @@
                     sections: sections,
                     categoryGroups: categoryGroups,
                     selectedSection: $selectedSection,
-                    onRefreshAll: onRefreshAll,
                     onCategoryActivated: {
                         showsRecordings = false
                         guideFocusToken += 1
                     },
+                    onRefreshAll: onRefreshAll,
                     recordings: recordingsEntry
                 )
                 if recordingsShown {
