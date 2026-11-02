@@ -192,6 +192,45 @@ struct SportsChannelResolverTests {
         #expect(channels.allSatisfy { !$0.isConfident })
     }
 
+    @Test func `matching channels from separate playlists retain their provider and category`() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let firstPlaylist = Playlist(name: "Provider One", serverURL: "", username: "", password: "")
+        let secondPlaylist = Playlist(name: "Provider Two", serverURL: "", username: "", password: "")
+        let firstCategory = Category(apiId: "sports", name: "Sports One", parentId: 0, type: .live, playlist: firstPlaylist)
+        let secondCategory = Category(apiId: "sports", name: "Sports Two", parentId: 0, type: .live, playlist: secondPlaylist)
+        context.insert(firstPlaylist)
+        context.insert(secondPlaylist)
+        context.insert(firstCategory)
+        context.insert(secondCategory)
+        context.insert(LiveStream(
+            id: "\(firstPlaylist.id.uuidString)-live-1",
+            streamId: 1,
+            name: "Sky Bundesliga",
+            epgChannelId: "sky.de",
+            categoryId: firstCategory.id
+        ))
+        context.insert(LiveStream(
+            id: "\(secondPlaylist.id.uuidString)-live-2",
+            streamId: 2,
+            name: "DAZN Bundesliga",
+            epgChannelId: "dazn.de",
+            categoryId: secondCategory.id
+        ))
+        let kickoff = Date()
+        context.insert(listing(channelId: "sky.de", title: "Bundesliga", subtitle: "Bayern vs Dortmund", start: kickoff))
+        context.insert(listing(channelId: "dazn.de", title: "Bundesliga", subtitle: "Bayern vs Dortmund", start: kickoff))
+        try context.save()
+
+        let fixture = bayernVsDortmund(kickoff: kickoff)
+        let result = await SportsChannelResolver.resolve(container: container, fixtures: [fixture], now: kickoff)
+
+        let channels = try #require(result[fixture.id])
+        #expect(channels.count == 2)
+        #expect(Set(channels.compactMap(\.stream.playlistName)) == ["Provider One", "Provider Two"])
+        #expect(Set(channels.compactMap(\.stream.categoryName)) == ["Sports One", "Sports Two"])
+    }
+
     @Test func `hidden channels and restricted categories are excluded`() async throws {
         let container = try makeContainer()
         let context = ModelContext(container)

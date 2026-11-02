@@ -144,6 +144,8 @@ passes, each cheaper than the last only once the earlier ones have narrowed it:
 1. **Candidate channels.** One scoped `LiveStream` fetch across *all* playlists,
    with hidden channels and parental-/user-restricted categories excluded in
    SQLite (not in Swift).
+   Each result also carries its playlist and category names so the Sports Hub
+   can identify the provider behind a suggested channel.
 2. **Guide window.** One `EPGListing` fetch bounded by the union kickoff window
    *and* the candidate channel ids — never the unscoped time-only scan that once
    froze the guide. It is the one guide fetch that reads `listingDescription`:
@@ -170,6 +172,12 @@ match `score`, then on proximity to kickoff:
 A team is "present" when any distinctive token from `SportsMatcher.tokens(for:)`
 (aliases from the bundled `SportsTeamAliases.json`) appears as a whole word in a
 `SportsMatcher.normalize`d haystack.
+
+The Sports screens use the guide already in the catalog and re-resolve after a
+normal guide sync. Opening Sports does not start a separate full-guide refresh;
+scheduled sync and Refresh All remain responsible for keeping the guide current.
+Suggested channel labels show the channel name, owning playlist, and category.
+On macOS, a label that overflows its row scrolls continuously only while hovered.
 
 ### Race sessions
 

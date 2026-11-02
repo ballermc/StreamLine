@@ -23,6 +23,7 @@
 //
 
 import Foundation
+import OSLog
 import SwiftData
 
 // MARK: - Result value types
@@ -70,6 +71,8 @@ nonisolated struct ResolvedStreamSummary: Codable, Hashable {
     let name: String
     let streamIcon: String?
     let epgChannelId: String?
+    let playlistName: String?
+    let categoryName: String?
 }
 
 /// One channel that can carry a fixture, with why and how well it matched.
@@ -89,6 +92,15 @@ nonisolated struct ResolvedChannel: Codable, Hashable, Identifiable {
 
     var id: String {
         stream.id
+    }
+}
+
+nonisolated extension ResolvedChannel {
+    /// The strongest match from each playlist, preserving resolver order. This
+    /// gives fixture cards a concise source list without hiding another provider.
+    static func preferredPerPlaylist(in channels: [ResolvedChannel]) -> [ResolvedChannel] {
+        var seen = Set<UUID>()
+        return channels.filter { seen.insert($0.playlistID).inserted }
     }
 }
 
@@ -186,7 +198,12 @@ nonisolated enum SportsChannelResolver {
             // Pass 1 — candidate channels across all playlists.
             let streams = (try? context.fetch(candidateStreamDescriptor(restriction: restriction))) ?? []
             guard !streams.isEmpty, !Task.isCancelled else { return hits }
-            let (channels, channelIds) = buildChannels(from: streams)
+            let (playlistNames, categoryNames) = sourceNames(for: streams, in: context)
+            let (channels, channelIds) = buildChannels(
+                from: streams,
+                playlistNames: playlistNames,
+                categoryNames: categoryNames
+            )
 
             // Pass 2 — the guide around each uncached kickoff, not the span
             // between the earliest and the latest one.
@@ -219,7 +236,9 @@ nonisolated enum SportsChannelResolver {
     /// haystacks) and collects their non-empty EPG channel ids for the Pass 2
     /// fetch.
     private nonisolated static func buildChannels(
-        from streams: [LiveStream]
+        from streams: [LiveStream],
+        playlistNames: [UUID: String],
+        categoryNames: [String: String]
     ) -> (channels: [Channel], channelIds: Set<String>) {
         var channels: [Channel] = []
         channels.reserveCapacity(streams.count)
@@ -231,7 +250,9 @@ nonisolated enum SportsChannelResolver {
                     id: stream.id,
                     name: stream.name,
                     streamIcon: stream.streamIcon,
-                    epgChannelId: stream.epgChannelId
+                    epgChannelId: stream.epgChannelId,
+                    playlistName: playlistNames[playlistID],
+                    categoryName: stream.categoryId.flatMap { categoryNames[$0] }
                 ),
                 playlistID: playlistID,
                 nameHaystack: SportsMatcher.normalize(stream.name),
@@ -240,6 +261,41 @@ nonisolated enum SportsChannelResolver {
             if let cid = stream.epgChannelId, !cid.isEmpty { channelIds.insert(cid) }
         }
         return (channels, channelIds)
+    }
+
+    /// Fetches the small source labels once for the candidate batch. The channel
+    /// rows themselves stay the only broad query; category lookup is limited to
+    /// category IDs those candidates actually reference.
+    private nonisolated static func sourceNames(
+        for streams: [LiveStream],
+        in context: ModelContext
+    ) -> (playlists: [UUID: String], categories: [String: String]) {
+        var playlistDescriptor = FetchDescriptor<Playlist>()
+        playlistDescriptor.propertiesToFetch = [\.id, \.name]
+        var playlists: [UUID: String] = [:]
+        do {
+            for playlist in try context.fetch(playlistDescriptor) {
+                playlists[playlist.id] = playlist.name
+            }
+        } catch {
+            Logger.database.warning("Sports channel playlist-name lookup failed: \(error.localizedDescription)")
+        }
+
+        let categoryIDs = Array(Set(streams.compactMap(\.categoryId)))
+        guard !categoryIDs.isEmpty else { return (playlists, [:]) }
+        var categoryDescriptor = FetchDescriptor<Category>(
+            predicate: #Predicate { categoryIDs.contains($0.id) }
+        )
+        categoryDescriptor.propertiesToFetch = [\.id, \.name]
+        var categories: [String: String] = [:]
+        do {
+            for category in try context.fetch(categoryDescriptor) {
+                categories[category.id] = category.name
+            }
+        } catch {
+            Logger.database.warning("Sports channel category-name lookup failed: \(error.localizedDescription)")
+        }
+        return (playlists, categories)
     }
 
     /// An EPG candidate with its title, subtitle and the head of its description

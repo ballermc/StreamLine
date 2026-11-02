@@ -237,7 +237,13 @@
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 24) {
                         ForEach(group.fixtures) { fixture in
-                            TVFixtureLogoCard(fixture: fixture, showsLeagueMark: !group.isSingleLeague) {
+                            TVFixtureLogoCard(
+                                fixture: fixture,
+                                suggestedChannels: ResolvedChannel.preferredPerPlaylist(
+                                    in: resolved[fixture.id] ?? []
+                                ),
+                                showsLeagueMark: !group.isSingleLeague
+                            ) {
                                 selectedFixture = fixture
                             }
                             .focused($focus, equals: .card(fixture.id))
@@ -343,7 +349,6 @@
             store.loadCached(leagueIds: displayLeagueIds)
             SportsSyncService.shared.refreshIfStale()
             SportsSyncService.shared.beginLivePolling()
-            Task { await EPGSyncService.shared.refreshIfMissingSubtitles() }
         }
 
         private var resolveKey: String {

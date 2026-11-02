@@ -91,11 +91,6 @@ final class EPGSyncService {
     @ObservationIgnored private var isBackgroundRefresh = false
     @ObservationIgnored private var gate = EPGRefreshGate()
 
-    /// Latched once `hasSubtitleData` first sees a `<sub-title>`: listings only ever
-    /// gain sub-titles (a guide refresh adds them; nothing strips them), so a
-    /// confirmed `true` never needs the table re-scanned on later hub opens.
-    private var subtitleDataConfirmed = false
-
     private init() {}
 
     func configure(container: ModelContainer) {
@@ -132,25 +127,6 @@ final class EPGSyncService {
         guard isDue, gate.request() else { return }
         kick(background: true)
     }
-
-    /// The Sports Hub matches fixtures against programme sub-titles; a guide
-    /// imported before those were kept matches poorly. Refresh it once per
-    /// launch when no listing carries a sub-title, rather than telling the
-    /// viewer to. Returns whether a refresh was started.
-    @discardableResult
-    func refreshIfMissingSubtitles() async -> Bool {
-        guard !didRefreshForSubtitles else { return false }
-        if await hasSubtitleData() { return false }
-        guard !isSyncing else { return false }
-        // A deferred request still counts: the owed refresh brings the
-        // sub-titles in as soon as the pending sync is done.
-        didRefreshForSubtitles = true
-        guard gate.request() else { return false }
-        kick(background: true)
-        return true
-    }
-
-    private var didRefreshForSubtitles = false
 
     // MARK: - Content sync reports
 
@@ -201,27 +177,6 @@ final class EPGSyncService {
         let raw = UserDefaults.standard.string(forKey: SyncFrequency.epgStorageKey) ?? ""
         let frequency = SyncFrequency.resolveEPG(raw)
         return frequency.isDue(lastSyncDate: EPGSyncSchedule.lastSyncDate)
-    }
-
-    /// Cheap probe for whether any ingested listing carries a `<sub-title>` — the
-    /// signal the Sports Hub's first-run hint keys off ("channel matching
-    /// improves after your next guide refresh"). Runs the `fetchLimit(1)` fetch
-    /// off the main actor so a hub open never blocks on it.
-    func hasSubtitleData() async -> Bool {
-        if subtitleDataConfirmed { return true }
-        guard let container else { return false }
-        let found = await Task.detached(priority: .utility) {
-            let context = ModelContext(container)
-            var descriptor = FetchDescriptor<EPGListing>(
-                predicate: #Predicate { $0.subtitle != nil }
-            )
-            descriptor.fetchLimit = 1
-            descriptor.propertiesToFetch = [\.subtitle]
-            let results = (try? context.fetch(descriptor)) ?? []
-            return !results.isEmpty
-        }.value
-        if found { subtitleDataConfirmed = true }
-        return found
     }
 
     private func kick(background: Bool = false) {

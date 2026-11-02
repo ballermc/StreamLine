@@ -23,7 +23,14 @@ private func makeFixture(id: String = "1", state: SportsFixtureState) -> SportsF
 
 private func makeChannel(_ id: String) -> ResolvedChannel {
     ResolvedChannel(
-        stream: ResolvedStreamSummary(id: id, name: "DAZN \(id)", streamIcon: nil, epgChannelId: nil),
+        stream: ResolvedStreamSummary(
+            id: id,
+            name: "DAZN \(id)",
+            streamIcon: nil,
+            epgChannelId: nil,
+            playlistName: nil,
+            categoryName: nil
+        ),
         playlistID: UUID(),
         matchedTitle: nil,
         matchedStart: nil,

@@ -130,6 +130,7 @@ struct SportsChannelLabel: View {
         VStack(alignment: .leading, spacing: 2) {
             nameLine
             subtitleLine
+            SportsChannelSourceLabel(channel: channel)
             if isLastWatched {
                 Text("Last watched")
                     .font(.caption.weight(.semibold))
@@ -140,9 +141,8 @@ struct SportsChannelLabel: View {
 
     private var nameLine: some View {
         HStack(spacing: 6) {
-            Text(verbatim: channel.stream.name)
+            SportsOverflowText(text: channel.stream.name)
                 .font(.subheadline.weight(.medium))
-                .lineLimit(1)
             if let badge = sportsQualityBadge(from: channel.stream.name) {
                 Text(verbatim: badge)
                     .font(.caption2.weight(.bold))
