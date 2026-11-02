@@ -177,7 +177,8 @@ The Sports screens use the guide already in the catalog and re-resolve after a
 normal guide sync. Opening Sports does not start a separate full-guide refresh;
 scheduled sync and Refresh All remain responsible for keeping the guide current.
 Suggested channel labels show the channel name, owning playlist, and category.
-On macOS, a label that overflows its row scrolls continuously only while hovered.
+An overflowing label scrolls only while its channel row is highlighted, after a
+five-second delay. On macOS, pointer hover counts as highlighting.
 
 ### Race sessions
 

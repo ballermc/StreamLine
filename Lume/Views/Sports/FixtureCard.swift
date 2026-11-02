@@ -74,16 +74,10 @@ struct FixtureCard: View {
             if fixture.hasTeams {
                 VStack(alignment: .leading, spacing: 8) {
                     teamRows
-                    ForEach(ResolvedChannel.preferredPerPlaylist(in: resolved)) { channel in
-                        SportsFixtureChannelSummary(channel: channel)
-                    }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     eventRow
-                    ForEach(ResolvedChannel.preferredPerPlaylist(in: resolved)) { channel in
-                        SportsFixtureChannelSummary(channel: channel)
-                    }
                 }
             }
 
@@ -328,15 +322,6 @@ struct FixtureCard: View {
             parts.append(fixture.status.localizedStoppage)
         }
         parts.append(fixture.tournamentLine ?? fixture.leagueName)
-        for channel in ResolvedChannel.preferredPerPlaylist(in: resolved) {
-            parts.append(String(localized: "Channel: \(channel.stream.name)"))
-            if let playlistName = channel.stream.playlistName {
-                parts.append(String(localized: "Playlist: \(playlistName)"))
-            }
-            if let categoryName = channel.stream.categoryName {
-                parts.append(String(localized: "Category: \(categoryName)"))
-            }
-        }
         return Text(verbatim: parts.joined(separator: ", "))
     }
 

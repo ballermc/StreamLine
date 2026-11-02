@@ -33,41 +33,15 @@ struct SportsChannelSourceLabel: View {
     }
 }
 
-/// A compact channel summary used directly on the fixture card.
-struct SportsFixtureChannelSummary: View {
-    let channel: ResolvedChannel
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "tv")
-                .font(.caption2)
-                .accessibilityHidden(true)
-            SportsOverflowText(text: Self.displayText(for: channel))
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-
-    static func displayText(for channel: ResolvedChannel) -> String {
-        [
-            channel.stream.name,
-            channel.stream.playlistName,
-            channel.stream.categoryName
-        ]
-        .compactMap { $0 }
-        .joined(separator: " · ")
-    }
-}
-
-/// Clips long channel labels at rest and scrolls them continuously while the
-/// pointer is over the label on macOS.
+/// Clips long channel labels at rest and scrolls them continuously after the
+/// label remains highlighted for five seconds.
 struct SportsOverflowText: View {
     let text: String
 
     @State private var contentWidth: CGFloat = 0
     @State private var isHovering = false
+    @State private var isScrolling = false
+    @Environment(\.isFocused) private var isFocused
 
     private let gap: CGFloat = 32
     private let lineHeight: CGFloat = 17
@@ -76,7 +50,7 @@ struct SportsOverflowText: View {
     var body: some View {
         GeometryReader { geometry in
             let overflows = contentWidth > geometry.size.width
-            let isScrolling = isHovering && overflows
+            let shouldScroll = isScrolling && overflows
             HStack(spacing: gap) {
                 label
                 if overflows {
@@ -84,13 +58,13 @@ struct SportsOverflowText: View {
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
-            .offset(x: isScrolling ? -(contentWidth + gap) : 0)
+            .offset(x: shouldScroll ? -(contentWidth + gap) : 0)
             .animation(
-                isScrolling
+                shouldScroll
                     ? .linear(duration: Double((contentWidth + gap) / pointsPerSecond))
                         .repeatForever(autoreverses: false)
                     : nil,
-                value: isScrolling
+                value: shouldScroll
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .clipped()
@@ -110,7 +84,26 @@ struct SportsOverflowText: View {
         }
         .frame(height: lineHeight)
         .onPreferenceChange(SportsTextWidthKey.self) { contentWidth = $0 }
+        .task(id: isHighlighted) {
+            isScrolling = false
+            guard isHighlighted else { return }
+            do {
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+                guard !Task.isCancelled else { return }
+                isScrolling = true
+            } catch {
+                return
+            }
+        }
         .accessibilityLabel(Text(verbatim: text))
+    }
+
+    private var isHighlighted: Bool {
+        #if os(macOS)
+            return isHovering || isFocused
+        #else
+            return isFocused
+        #endif
     }
 
     private var label: some View {

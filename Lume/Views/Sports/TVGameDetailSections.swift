@@ -34,6 +34,7 @@
                     VStack(alignment: .leading, spacing: 6) {
                         name
                         subtitle
+                        SportsChannelSourceLabel(channel: channel)
                     }
                     Spacer(minLength: 16)
                     Image(systemName: "play.circle.fill").font(.system(size: 40))
@@ -53,9 +54,8 @@
 
         private var name: some View {
             HStack(spacing: 10) {
-                Text(verbatim: channel.stream.name)
+                SportsOverflowText(text: channel.stream.name)
                     .font(.system(size: 28, weight: .semibold))
-                    .lineLimit(1)
                 if let badge = sportsQualityBadge(from: channel.stream.name) {
                     Text(verbatim: badge)
                         .font(.system(size: 18, weight: .bold))

@@ -95,15 +95,6 @@ nonisolated struct ResolvedChannel: Codable, Hashable, Identifiable {
     }
 }
 
-nonisolated extension ResolvedChannel {
-    /// The strongest match from each playlist, preserving resolver order. This
-    /// gives fixture cards a concise source list without hiding another provider.
-    static func preferredPerPlaylist(in channels: [ResolvedChannel]) -> [ResolvedChannel] {
-        var seen = Set<UUID>()
-        return channels.filter { seen.insert($0.playlistID).inserted }
-    }
-}
-
 // MARK: - Resolver
 
 nonisolated enum SportsChannelResolver {

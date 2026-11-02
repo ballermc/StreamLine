@@ -15,7 +15,6 @@
 
     struct TVFixtureLogoCard: View {
         let fixture: SportsFixture
-        var suggestedChannels: [ResolvedChannel] = []
         /// Off inside a rail that is already one competition, where the crest
         /// would only repeat the rail's heading.
         var showsLeagueMark = true
@@ -26,7 +25,6 @@
             Button(action: onSelect) {
                 TVFixtureLogoCardContent(
                     fixture: fixture,
-                    suggestedChannels: suggestedChannels,
                     showsLeagueMark: showsLeagueMark,
                     showsScore: !hidesScores
                 )
@@ -37,17 +35,7 @@
         }
 
         private var spokenSummary: String {
-            var parts = [fixture.tvSpokenSummary(showsScore: !hidesScores)]
-            for suggestedChannel in suggestedChannels {
-                parts.append(String(localized: "Channel: \(suggestedChannel.stream.name)"))
-                if let playlistName = suggestedChannel.stream.playlistName {
-                    parts.append(String(localized: "Playlist: \(playlistName)"))
-                }
-                if let categoryName = suggestedChannel.stream.categoryName {
-                    parts.append(String(localized: "Category: \(categoryName)"))
-                }
-            }
-            return parts.joined(separator: ", ")
+            fixture.tvSpokenSummary(showsScore: !hidesScores)
         }
     }
 
@@ -90,7 +78,6 @@
 
     private struct TVFixtureLogoCardContent: View {
         let fixture: SportsFixture
-        let suggestedChannels: [ResolvedChannel]
         let showsLeagueMark: Bool
         let showsScore: Bool
         @Environment(\.isFocused) private var isFocused
@@ -112,14 +99,10 @@
                     eventLine
                         .padding(.top, 14)
                 }
-                ForEach(suggestedChannels) { suggestedChannel in
-                    channelLine(suggestedChannel)
-                        .padding(.top, 8)
-                }
             }
             .padding(.horizontal, 22)
             .padding(.vertical, 20)
-            .frame(width: 320, height: 200 + CGFloat(suggestedChannels.count * 25))
+            .frame(width: 320, height: 200)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(Color.black.opacity(0.55))
@@ -130,14 +113,6 @@
                     .strokeBorder(.white.opacity(isFocused ? 1 : 0.1), lineWidth: isFocused ? 4 : 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        }
-
-        private func channelLine(_ channel: ResolvedChannel) -> some View {
-            SportsOverflowText(text: SportsFixtureChannelSummary.displayText(for: channel))
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
-                .accessibilityHidden(true)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
 
         /// The competition's crest (its abbreviation only when no crest is

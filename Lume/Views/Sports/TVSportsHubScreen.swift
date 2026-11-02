@@ -239,9 +239,6 @@
                         ForEach(group.fixtures) { fixture in
                             TVFixtureLogoCard(
                                 fixture: fixture,
-                                suggestedChannels: ResolvedChannel.preferredPerPlaylist(
-                                    in: resolved[fixture.id] ?? []
-                                ),
                                 showsLeagueMark: !group.isSingleLeague
                             ) {
                                 selectedFixture = fixture
