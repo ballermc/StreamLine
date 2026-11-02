@@ -138,7 +138,7 @@ struct WidgetSnapshotExporterTests {
     @Test func `continue watching resumes movies and the series' in-progress episode`() throws {
         let (container, playlist) = try seedContainer()
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
 
         // The series was watched more recently than the movie.
@@ -171,7 +171,7 @@ struct WidgetSnapshotExporterTests {
         try context.save()
 
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
 
         // Ordered by the show's own stamp, between the series and the movie.
@@ -193,7 +193,7 @@ struct WidgetSnapshotExporterTests {
         try context.save()
 
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
         #expect(snapshot.continueWatching.map(\.title) == ["Resumable"])
     }
@@ -201,7 +201,7 @@ struct WidgetSnapshotExporterTests {
     @Test func `favorites interleave kinds in unified order`() throws {
         let (container, playlist) = try seedContainer()
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
 
         #expect(snapshot.favorites.map(\.title) == ["Show", "Favorite Movie", "News 24"])
@@ -211,7 +211,7 @@ struct WidgetSnapshotExporterTests {
     @Test func `on now carries the current and next programme`() throws {
         let (container, playlist) = try seedContainer()
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
 
         let channel = try #require(snapshot.onNow.first)
@@ -235,12 +235,12 @@ struct WidgetSnapshotExporterTests {
         try context.save()
 
         let adult = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
         #expect(adult.favorites.contains { $0.title == "Hidden" })
 
         let child = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: true
+            container: container, isChildProfile: true
         )
         #expect(!child.favorites.contains { $0.title == "Hidden" })
         #expect(!child.continueWatching.contains { $0.title == "Hidden" })
@@ -266,7 +266,7 @@ struct WidgetSnapshotExporterTests {
         try context.save()
 
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
         #expect(!snapshot.favorites.contains { $0.title == "In Hidden Category" })
         #expect(!snapshot.continueWatching.contains { $0.title == "In Hidden Category" })
@@ -286,16 +286,48 @@ struct WidgetSnapshotExporterTests {
         try context.save()
 
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: playlist.id.uuidString, isChildProfile: false
+            container: container, isChildProfile: false
         )
         #expect(!snapshot.favorites.contains { $0.title == "Foreign" })
         #expect(!snapshot.continueWatching.contains { $0.title == "Foreign" })
     }
 
+    @Test func `premium snapshots include all playlist sources while free snapshots stay scoped`() throws {
+        let (container, firstPlaylist) = try seedContainer()
+        let context = container.mainContext
+        let secondPlaylist = Playlist(name: "Second", serverURL: "http://second.example", username: "u", password: "p")
+        secondPlaylist.addedAt = firstPlaylist.addedAt.addingTimeInterval(1)
+        context.insert(secondPlaylist)
+
+        let secondFavorite = Movie(
+            id: "\(secondPlaylist.id.uuidString)-movie-1",
+            streamId: 1,
+            name: "Second Source Favorite"
+        )
+        secondFavorite.isFavorite = true
+        secondFavorite.favoriteOrder = 0
+        context.insert(secondFavorite)
+        try context.save()
+
+        let premiumSnapshot = WidgetSnapshotExporter.makeSnapshot(
+            container: container,
+            isChildProfile: false,
+            isPremium: true
+        )
+        let freeSnapshot = WidgetSnapshotExporter.makeSnapshot(
+            container: container,
+            isChildProfile: false,
+            isPremium: false
+        )
+
+        #expect(premiumSnapshot.favorites.contains { $0.title == "Second Source Favorite" })
+        #expect(!freeSnapshot.favorites.contains { $0.title == "Second Source Favorite" })
+    }
+
     @Test func `no playlists produces an empty snapshot`() throws {
         let container = try makeTestContainer()
         let snapshot = WidgetSnapshotExporter.makeSnapshot(
-            container: container, storedPlaylistID: "", isChildProfile: false
+            container: container, isChildProfile: false
         )
         #expect(snapshot.continueWatching.isEmpty)
         #expect(snapshot.favorites.isEmpty)

@@ -2,7 +2,7 @@
 //  FavoriteManagementView.swift
 //  Lume
 //
-//  Reorder and unfavorite the active playlist's favorites — live channels,
+//  Reorder and unfavorite favorites across unlocked playlists — live channels,
 //  movies and series — in a single cross-type list. Reached by drilling into
 //  "Favorites" from ContentManagementView. The arrangement persists on each
 //  model's `favoriteOrder`, stamped densely across the whole list so a movie can
@@ -15,7 +15,7 @@ import SwiftData
 import SwiftUI
 
 /// Navigation marker for the favorites-reorder drill-in from Content Management.
-/// Carries no payload — the view reads the active playlist itself.
+/// Carries no payload — the view reads the available source scope itself.
 struct FavoritesRoute: Hashable {}
 
 /// One row in the unified favorites list. A value-type wrapper over any of the
@@ -63,7 +63,6 @@ struct FavoriteEntry: Identifiable, ReorderableRowItem {
 
 struct FavoriteManagementView: View {
     @Query private var playlists: [Playlist]
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
 
     /// Each type is fetched and sorted by its own `favoriteOrder` (nil-first, then
     /// the provider order); the three are merged and re-sorted in-memory into the
@@ -83,33 +82,29 @@ struct FavoriteManagementView: View {
         sort: [SortDescriptor(\Series.favoriteOrder), SortDescriptor(\Series.num), SortDescriptor(\Series.name)]
     ) private var favoriteSeries: [Series]
 
-    private var activePlaylist: Playlist? {
-        playlists.active(for: selectedPlaylistID)
-    }
-
-    /// Every favorite of the active playlist, merged across types and ordered by
+    /// Every unlocked favorite, merged across types and ordered by
     /// the cross-type `favoriteOrder`. Untouched favorites (nil order) fall
     /// through to a stable type/provider grouping.
     private var favorites: [FavoriteEntry] {
-        guard let playlistId = activePlaylist?.id else { return [] }
-        let prefix = "\(playlistId.uuidString)-"
+        let prefix = playlists.contentScopePrefix()
+        guard !playlists.isEmpty else { return [] }
 
         var entries: [FavoriteEntry] = []
-        for stream in favoriteChannels where stream.id.hasPrefix(prefix) {
+        for stream in favoriteChannels where prefix.isEmpty || stream.id.hasPrefix(prefix) {
             entries.append(FavoriteEntry(
                 id: stream.id, model: stream, title: stream.name,
                 iconURL: URL(string: stream.streamIcon ?? ""), kind: .live,
                 favoriteOrder: stream.favoriteOrder, providerNum: stream.num
             ))
         }
-        for movie in favoriteMovies where movie.id.hasPrefix(prefix) {
+        for movie in favoriteMovies where prefix.isEmpty || movie.id.hasPrefix(prefix) {
             entries.append(FavoriteEntry(
                 id: movie.id, model: movie, title: movie.name,
                 iconURL: URL(string: movie.streamIcon ?? ""), kind: .movie,
                 favoriteOrder: movie.favoriteOrder, providerNum: movie.num
             ))
         }
-        for series in favoriteSeries where series.id.hasPrefix(prefix) {
+        for series in favoriteSeries where prefix.isEmpty || series.id.hasPrefix(prefix) {
             entries.append(FavoriteEntry(
                 id: series.id, model: series, title: series.name,
                 iconURL: URL(string: series.cover ?? ""), kind: .series,

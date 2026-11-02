@@ -459,9 +459,7 @@ struct LoginView: View {
 
     func insertAndFinish(_ playlist: Playlist) {
         modelContext.insert(playlist)
-        // Adding doesn't select it, so auto-sync needs telling that this one
-        // syncs anyway — see `AutoSync.addedThisSession`.
-        AutoSync.addedThisSession.insert(playlist.id)
+        // Every unlocked playlist is eligible for automatic refresh.
         // Set up the playlist's EPG source so the guide refreshes on its own
         // schedule — EPG is no longer part of the content sync.
         EPGSourceReconciler.reconcile(playlist, in: modelContext)

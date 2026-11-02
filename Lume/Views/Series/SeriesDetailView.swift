@@ -423,7 +423,9 @@ struct SeriesDetailView: View {
     }
 
     private var seriesPlaylist: Playlist? {
-        playlists.first { series.id.hasPrefix($0.id.uuidString) } ?? playlists.first
+        guard let playlist = playlists.owner(ofContentID: series.id),
+              !playlists.isLocked(playlist) else { return nil }
+        return playlist
     }
 
     // MARK: - Loading & enrichment

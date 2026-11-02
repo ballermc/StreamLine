@@ -2,7 +2,7 @@
 //  ContentManagementView.swift
 //  Lume
 //
-//  Lets the user hide and reorder the categories of the active playlist, and
+//  Lets the user hide and reorder the categories of every unlocked playlist, and
 //  drill into a live category to manage its individual channels. Preferences
 //  live on the `Category` / `LiveStream` models (`isHidden`, `customOrder`), so
 //  they're inherently per-playlist and survive re-syncs.
@@ -18,7 +18,6 @@ import SwiftUI
 
 struct ContentManagementView: View {
     @Query private var playlists: [Playlist]
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
 
     @State private var selectedType: CategoryType = .live
 
@@ -30,12 +29,12 @@ struct ContentManagementView: View {
 
     /// Every category across all playlists; scoped and sorted in-memory because
     /// SwiftData can't parameterise a `@Query` on view state (the picker's type,
-    /// the active playlist). That pass is anything but small — a real provider
+    /// the unlocked source scope). That pass is anything but small — a real provider
     /// ships 1,700+ categories in a single playlist, 916 of them live — so it is
     /// resolved once per input change into `categories` below.
     @Query private var allCategories: [Category]
 
-    /// Categories of the selected type for the active playlist, in effective
+    /// Categories of the selected type across unlocked sources, in effective
     /// order (user order if set, else the synced playlist order). Cached rather
     /// than computed: `body` reads the group three or four times per evaluation
     /// (the emptiness checks, the bulk actions, `listedCategories`), so the
@@ -60,7 +59,7 @@ struct ContentManagementView: View {
 
     var body: some View {
         Group {
-            if activePlaylist != nil {
+            if !playlists.isEmpty {
                 content
             } else {
                 ContentUnavailableView(
@@ -105,14 +104,10 @@ struct ContentManagementView: View {
 
     // MARK: - Scoping
 
-    private var activePlaylist: Playlist? {
-        playlists.active(for: selectedPlaylistID)
-    }
-
-    /// The id prefix every Category of the active playlist shares. Empty only
-    /// when there is no playlist at all, and then there is nothing to scope.
+    /// Empty includes every catalog; the free plan is scoped to its one
+    /// unlocked playlist.
     private var playlistPrefix: String {
-        activePlaylist.map { "\($0.id.uuidString)-" } ?? ""
+        playlists.contentScopePrefix()
     }
 
     /// Everything the scoped group depends on, folded into one comparable value.
@@ -120,7 +115,8 @@ struct ContentManagementView: View {
     /// or removing categories; the actions that rewrite `customOrder` (reorder,
     /// reset) leave the count alone and so refresh the group themselves.
     private var scopeKey: String {
-        "\(playlistPrefix)|\(selectedType.rawValue)|\(allCategories.count)"
+        let playlistIDs = playlists.unlocked().map { $0.id.uuidString }.sorted().joined(separator: ",")
+        return "\(playlistIDs)|\(playlistPrefix)|\(selectedType.rawValue)|\(allCategories.count)"
     }
 
     /// The live search term — always empty on tvOS, which has no search field.
@@ -139,13 +135,16 @@ struct ContentManagementView: View {
     /// never from `body` itself, which is the whole point of caching it.
     private func refreshCategories() {
         let prefix = playlistPrefix
-        guard !prefix.isEmpty else {
+        guard !playlists.isEmpty else {
             categories = []
             listedCategories = []
             return
         }
         categories = allCategories
-            .filter { $0.typeRaw == selectedType.rawValue && $0.id.hasPrefix(prefix) }
+            .filter {
+                $0.typeRaw == selectedType.rawValue
+                    && (prefix.isEmpty || $0.id.hasPrefix(prefix))
+            }
             .sorted { lhs, rhs in
                 (lhs.customOrder ?? lhs.sortOrder, lhs.name) < (rhs.customOrder ?? rhs.sortOrder, rhs.name)
             }
@@ -219,13 +218,6 @@ struct ContentManagementView: View {
                         Text("Content")
                             .font(.system(size: 34, weight: .bold))
                             .padding(.horizontal, TVSettingsMetrics.rowHPadding)
-
-                        if let name = activePlaylist?.name {
-                            Text(name)
-                                .font(.system(size: 22))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, TVSettingsMetrics.rowHPadding)
-                        }
 
                         if !isReordering {
                             NavigationLink(value: FavoritesRoute()) {

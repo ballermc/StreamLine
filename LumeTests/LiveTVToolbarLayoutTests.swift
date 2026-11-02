@@ -38,25 +38,10 @@ struct LiveTVToolbarSpaceTests {
     /// "Home", "Movies", "Series", "Live TV", "Sports" at 17 pt.
     private let englishTabs: [CGFloat] = [45, 57, 50, 56, 52]
 
-    @Test func `an iPhone with one playlist keeps both buttons`() {
+    @Test func `an iPhone with multiple sources keeps both buttons`() {
         let space = LiveTVToolbarSpace(tabBarOnTop: false)
         #expect(!space.isCramped(width: 402)) // iPhone 17 Pro
         #expect(!space.isCramped(width: 390)) // iPhone 17e
-    }
-
-    @Test func `a playlist switcher crowds an iPhone`() {
-        let short = LiveTVToolbarSpace(tabBarOnTop: false, switcherTitleWidth: 31) // "test"
-        #expect(short.isCramped(width: 402))
-        #expect(!short.isCramped(width: 440)) // iPhone Pro Max
-
-        let longer = LiveTVToolbarSpace(tabBarOnTop: false, switcherTitleWidth: 66) // "My IPTV"
-        #expect(longer.isCramped(width: 440))
-    }
-
-    @Test func `a long playlist name costs no more than the switcher's cap`() {
-        let capped = LiveTVToolbarSpace(tabBarOnTop: false, switcherTitleWidth: 135)
-        let longest = LiveTVToolbarSpace(tabBarOnTop: false, switcherTitleWidth: 900)
-        #expect(longest.crampedBelowWidth == capped.crampedBelowWidth)
     }
 
     @Test func `an iPad's top tab bar folds the pair in portrait, not landscape`() {

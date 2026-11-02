@@ -13,12 +13,6 @@ struct SettingsView: View {
     @State var premium = PremiumManager.shared
     @State var showPaywall = false
     @State var paywallHighlight: PremiumFeature?
-    /// The globally-selected playlist, shared with the content tabs. Library's
-    /// tab switches apply to it, and on tvOS (no toolbar switcher) the Playlists
-    /// pane is also where it is chosen, the Play/Pause quick-switch overlay the
-    /// fast path. Not `private`: read by the SettingsView+Playlists / +Library
-    /// extensions (separate files).
-    @AppStorage(PlaylistSelectionStore.key) var selectedPlaylistID: String = ""
     /// Badges the Sync row while Lume Cloud's recovery key is unseen.
     @AppStorage(LumeCloudSettings.Key.recoveryKeyViewed) private var lumeCloudRecoveryKeyViewed = false
     #if !os(tvOS)
@@ -58,16 +52,10 @@ struct SettingsView: View {
         var preferredAudioLanguagesRaw = PlayerSettings.Language.preferredAudioLanguagesDefault
         @AppStorage(PlayerSettings.StreamInfo.detailLevelKey)
         var streamInfoDetailLevelRaw = PlayerSettings.StreamInfo.detailLevelDefault.rawValue
-        /// Not `private`: read by the SettingsView+Library extension (separate file).
-        @AppStorage(SearchSettings.searchAllPlaylistsKey)
-        var searchAllPlaylists = SearchSettings.searchAllPlaylistsDefault
         @AppStorage(SportsSyncService.tabEnabledKey) var sportsTabEnabled = SportsSyncService.tabEnabledDefault
         /// Not `private`: read by the SettingsView+AutoSync extension (separate file).
         @AppStorage(SyncFrequency.storageKey) var syncFrequencyRaw: String = SyncFrequency.defaultValue.rawValue
 
-        /// Routes the switch through the blocking overlay (see PlaylistSwitchModel).
-        /// Not `private`: read by the SettingsView+Playlists extension.
-        @Environment(PlaylistSwitchModel.self) var playlistSwitch: PlaylistSwitchModel?
         /// Not `private`: the Add Playlist row (SettingsView+Playlists) presents it.
         @State var showingAddPlaylist = false
         /// The category whose content is shown in the right pane. Changes only

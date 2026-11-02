@@ -71,8 +71,8 @@ final class PremiumManager {
 
     /// The entitlement as last read, answering for this launch until its own read
     /// of `Transaction.currentEntitlements` lands. Without it every launch began
-    /// on the free plan for a moment — long enough to put a Pro subscriber on
-    /// their first playlist (`[Playlist].active(for:)`) and start its sync.
+    /// on the free plan for a moment — long enough to hide all but the oldest
+    /// source and start syncing the wrong catalog.
     private static let lastKnownEntitledKey = "premium.lastKnownEntitled"
     private var hasReadEntitlements = false
     private var lastKnownEntitled = UserDefaults.standard.bool(forKey: PremiumManager.lastKnownEntitledKey)

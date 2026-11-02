@@ -16,8 +16,8 @@
     struct TVChannelsList: View {
         let scope: LiveChannelScope
         let playlistPrefix: String
-        /// The active playlist's source, so an empty list can say *why* it is
-        /// empty rather than tell a WebDAV user to sync again.
+        /// A single source type, so an empty list can explain a non-live source
+        /// rather than tell a WebDAV user to sync again.
         let sourceType: PlaylistSourceType?
         /// Seeds Multi-View with this channel, gated on Lume Pro by the host.
         let onStartMultiView: (LiveStream) -> Void
@@ -148,7 +148,7 @@
             try? modelContext.save()
         }
 
-        /// Empties the whole Recently Watched list for the active playlist. The
+        /// Empties the whole Recently Watched list for the unlocked source scope. The
         /// section drops away on its own once the last timestamp clears (its
         /// parent gates it on `hasRecents`).
         private func clearRecentlyWatched() {
@@ -320,12 +320,12 @@
         /// Raises Multi-View seeded with a channel, from its long-press menu.
         let onStartMultiView: (LiveStream) -> Void
 
-        /// The active playlist's id prefix, needed to scope the virtual
+        /// The unlocked source scope's id prefix, needed to scope the virtual
         /// (favorites / recently watched) collections in-memory.
         let playlistPrefix: String
 
-        /// The active playlist's source, forwarded so an empty channel list can
-        /// explain itself. See `LiveTVEmptyState`.
+        /// The sole source type, forwarded so an empty channel list can explain
+        /// itself. See `LiveTVEmptyState`.
         let sourceType: PlaylistSourceType?
 
         let layoutMode: LiveTVLayoutMode

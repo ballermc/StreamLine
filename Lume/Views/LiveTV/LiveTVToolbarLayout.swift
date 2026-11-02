@@ -35,8 +35,7 @@ nonisolated enum LiveTVToolbarClusterLayout: Equatable {
 
 /// The room the Live TV toolbar needs on iPhone and iPad, and the narrowest
 /// Live TV view that still fits the cluster as two separate buttons beside the
-/// library buttons (sort, Sync, Settings, and the playlist switcher when there
-/// is more than one playlist).
+/// library buttons (sort, Sync, and Settings).
 ///
 /// When the trailing items outgrow the bar, UIKit moves the surplus into a
 /// `•••` overflow: on iPhone, Sync and Settings go first; on an iPad, whose
@@ -51,10 +50,8 @@ nonisolated enum LiveTVToolbarClusterLayout: Equatable {
 /// trailing items keep 30 pt off the tab bar and 11 pt off the edge. The top
 /// tab bar is its titles' widths plus 33 pt a tab plus 59 pt (Search and the
 /// capsule's insets) — within 1 pt of the English, French and German bars.
-/// Checked against the real bar: with one playlist an iPhone 17e or 17 Pro
-/// fits both buttons, and with a switcher neither does; an iPhone Pro Max
-/// (440 pt) fits them beside a switcher titled "test" but not "My IPTV". An
-/// iPad's top bar needs about 1,150 pt, so 11" and 13" iPads fold the pair in
+/// Checked against the real bar: an iPhone 17e or 17 Pro fits both buttons.
+/// An iPad's top bar needs about 1,150 pt, so 11" and 13" iPads fold the pair in
 /// portrait and keep two buttons in landscape (1,180 pt and wider).
 nonisolated struct LiveTVToolbarSpace: Hashable {
     /// Whether the tab bar floats in the navigation bar (an iPad in a
@@ -63,9 +60,6 @@ nonisolated struct LiveTVToolbarSpace: Hashable {
     var tabBarOnTop: Bool
     /// Widths of the top tab bar's titled tabs at 17 pt (Search is an icon).
     var tabTitleWidths: [CGFloat] = []
-    /// Width of the playlist switcher's title, or nil when it isn't shown.
-    var switcherTitleWidth: CGFloat?
-
     static let buttonPitch: CGFloat = 42
     static let capsuleInsets: CGFloat = 35
     static let groupSpacing: CGFloat = 12
@@ -74,12 +68,6 @@ nonisolated struct LiveTVToolbarSpace: Hashable {
     static let topTrailingMargin: CGFloat = 11
     static let tabTitleInsets: CGFloat = 33
     static let tabBarInsets: CGFloat = 59
-    /// `PlaylistSwitcher`'s label cap, and what its label adds to the title
-    /// (spacing and chevron) and the toolbar adds around it.
-    static let switcherLabelCap: CGFloat = 150
-    static let switcherChevron: CGFloat = 15
-    static let switcherInsets: CGFloat = 36
-
     /// The library capsule's buttons: sort, Sync, Settings.
     static let libraryButtons = 3
 
@@ -87,14 +75,9 @@ nonisolated struct LiveTVToolbarSpace: Hashable {
         capsuleInsets + CGFloat(buttons) * buttonPitch
     }
 
-    var switcherWidth: CGFloat {
-        guard let switcherTitleWidth else { return 0 }
-        return min(Self.switcherLabelCap, switcherTitleWidth + Self.switcherChevron) + Self.switcherInsets
-    }
-
     /// The trailing items' width with Recordings and Multi-View as two buttons.
     var separateItemsWidth: CGFloat {
-        Self.capsule(buttons: 2) + Self.groupSpacing + Self.capsule(buttons: Self.libraryButtons) + switcherWidth
+        Self.capsule(buttons: 2) + Self.groupSpacing + Self.capsule(buttons: Self.libraryButtons)
     }
 
     var topTabBarWidth: CGFloat {

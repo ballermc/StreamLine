@@ -26,7 +26,6 @@ struct LumeApp: App {
     @State private var cloudSync: CloudSyncCoordinator
     @State private var backendChoiceWatcher: SyncedBackendChoiceWatcher
     @State private var profileManager: ProfileManager
-    @State private var playlistSwitch = PlaylistSwitchModel()
     @State private var parentalControls: ParentalControls
     #if os(iOS)
         @UIApplicationDelegateAdaptor(LumeAppDelegate.self) private var appDelegate
@@ -332,7 +331,6 @@ struct LumeApp: App {
                 .environment(PremiumManager.shared)
                 .environment(cloudSync)
                 .environment(profileManager)
-                .environment(playlistSwitch)
                 .environment(parentalControls)
                 .task {
                     // Subscribe to MetricKit before anything else: payloads for a

@@ -1,25 +1,17 @@
 import SwiftUI
 
 struct LibraryToolbarModifier: ViewModifier {
-    let playlists: [Playlist]
-    @Binding var selectedPlaylistID: String
     @Binding var categorySortRaw: String
     @Binding var contentSortRaw: String
     @Binding var showingSync: Bool
     @Binding var showingSettings: Bool
-    let activePlaylist: Playlist?
+    let syncPlaylist: Playlist?
 
     @Environment(DeepLinkRouter.self) private var router: DeepLinkRouter?
 
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if playlists.count > 1 {
-                    ToolbarItem(placement: .automatic) {
-                        PlaylistSwitcher(playlists: playlists, selectedPlaylistID: $selectedPlaylistID)
-                    }
-                }
-
                 ToolbarItem(placement: .automatic) {
                     SortMenu(categorySortRaw: $categorySortRaw, contentSortRaw: $contentSortRaw)
                 }
@@ -60,7 +52,7 @@ struct LibraryToolbarModifier: ViewModifier {
                 }
             )
             .sheet(isPresented: $showingSync) {
-                if let playlist = activePlaylist {
+                if let playlist = syncPlaylist {
                     SyncProgressView(playlist: playlist)
                 }
             }
@@ -75,13 +67,11 @@ struct LibraryToolbarModifier: ViewModifier {
 }
 
 struct LibraryToolbarConfiguration {
-    let playlists: [Playlist]
-    @Binding var selectedPlaylistID: String
     @Binding var categorySortRaw: String
     @Binding var contentSortRaw: String
     @Binding var showingSync: Bool
     @Binding var showingSettings: Bool
-    let activePlaylist: Playlist?
+    let syncPlaylist: Playlist?
 }
 
 extension View {
@@ -91,13 +81,11 @@ extension View {
             return self
         #else
             return modifier(LibraryToolbarModifier(
-                playlists: config.playlists,
-                selectedPlaylistID: config.$selectedPlaylistID,
                 categorySortRaw: config.$categorySortRaw,
                 contentSortRaw: config.$contentSortRaw,
                 showingSync: config.$showingSync,
                 showingSettings: config.$showingSettings,
-                activePlaylist: config.activePlaylist
+                syncPlaylist: config.syncPlaylist
             ))
         #endif
     }

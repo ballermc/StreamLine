@@ -48,20 +48,6 @@ extension XCUIApplication {
         return navigationBars["Playlists"].waitForExistence(timeout: timeout)
     }
 
-    /// The library toolbar's playlist switcher, whichever playlist is active.
-    ///
-    /// The switcher carries an explicit `accessibilityLabel` of
-    /// "Playlist: <name>", so it is not reachable as `buttons[name]` — that
-    /// only matches the `Text` nested inside it, which is not the tappable
-    /// element.
-    ///
-    /// The active playlist isn't fixed under `-ui-testing`: the seeded "Test
-    /// Playlist" starts active, but a flow test that switches to the playlist
-    /// it added leaves that one active for every test after it.
-    var activePlaylistSwitcher: XCUIElement {
-        buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Playlist: ")).firstMatch
-    }
-
     /// Scrolls the screen up until `element` exists, and reports whether it
     /// ever did.
     ///

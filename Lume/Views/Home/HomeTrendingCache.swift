@@ -6,7 +6,7 @@
 //  tvOS renders only the selected tab, so `HomeView` (and its `@State`) is
 //  torn down on every tab switch — without this cache the hero carousel
 //  refetched and visibly popped in on each return to Home. Entries are keyed
-//  by the same invalidation keys the loading tasks use, so a playlist switch,
+//  by the same invalidation keys the loading tasks use, so a source-scope change,
 //  sync or added playlist still reloads; a cache entry is only read after its
 //  key matches, so stale model references from a removed playlist are never
 //  touched.

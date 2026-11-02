@@ -18,14 +18,12 @@ struct PlaylistSyncStateTests {
     private func resolve(
         syncEnabled: Bool = true,
         status: SyncStatus = .idle,
-        lastSyncDate: Date?,
-        isActive: Bool = true
+        lastSyncDate: Date?
     ) -> PlaylistSyncState {
         PlaylistSyncState.resolve(
             syncEnabled: syncEnabled,
             status: status,
             lastSyncDate: lastSyncDate,
-            isActive: isActive,
             frequency: frequency,
             now: now
         )
@@ -67,19 +65,9 @@ struct PlaylistSyncStateTests {
         #expect(resolve(lastSyncDate: boundary) == .overdue(lastSyncDate: boundary))
     }
 
-    @Test func `an overdue playlist that is not selected waits for selection`() {
-        // Auto-sync only refreshes the selected playlist, so "Sync due" would
-        // promise a sync that never comes on its own.
+    @Test func `an overdue playlist is due for refresh`() {
         let stale = now.addingTimeInterval(-frequency.interval - 60)
-        #expect(resolve(lastSyncDate: stale, isActive: false) == .awaitingSelection(lastSyncDate: stale))
-        #expect(resolve(lastSyncDate: stale, isActive: true) == .overdue(lastSyncDate: stale))
-    }
-
-    @Test func `selection doesn't change the states that aren't about staleness`() {
-        let recent = now.addingTimeInterval(-60)
-        #expect(resolve(lastSyncDate: recent, isActive: false) == .synced(lastSyncDate: recent))
-        #expect(resolve(lastSyncDate: nil, isActive: false) == .never)
-        #expect(resolve(status: .error, lastSyncDate: recent, isActive: false) == .failed)
+        #expect(resolve(lastSyncDate: stale) == .overdue(lastSyncDate: stale))
     }
 
     // MARK: - Presentation
@@ -91,7 +79,6 @@ struct PlaylistSyncStateTests {
         #expect(PlaylistSyncState.never.deservesRowAccessory)
         #expect(!PlaylistSyncState.synced(lastSyncDate: date).deservesRowAccessory)
         #expect(!PlaylistSyncState.overdue(lastSyncDate: date).deservesRowAccessory)
-        #expect(!PlaylistSyncState.awaitingSelection(lastSyncDate: date).deservesRowAccessory)
         #expect(!PlaylistSyncState.disabled(lastSyncDate: date).deservesRowAccessory)
     }
 
@@ -105,7 +92,6 @@ struct PlaylistSyncStateTests {
         let date = now.addingTimeInterval(-60)
         #expect(PlaylistSyncState.synced(lastSyncDate: date).lastSyncDate == date)
         #expect(PlaylistSyncState.overdue(lastSyncDate: date).lastSyncDate == date)
-        #expect(PlaylistSyncState.awaitingSelection(lastSyncDate: date).lastSyncDate == date)
         #expect(PlaylistSyncState.disabled(lastSyncDate: date).lastSyncDate == date)
     }
 }

@@ -68,7 +68,7 @@ struct LiveChannelQueryTests {
         #expect(kept.count == 2)
     }
 
-    @Test func `virtual scopes still isolate the active playlist`() {
+    @Test func `virtual scopes honor the supplied playlist scope`() {
         let mine = UUID()
         let other = UUID()
         let streams = [

@@ -13,6 +13,7 @@ import SwiftUI
 
 struct CategoryContentGrid<Item: Identifiable & Hashable & WatchlistFavoritable, Card: View>: View {
     let title: String
+    var sourceName: String? = nil
     let items: [Item]
     let animationNamespace: Namespace.ID?
     let emptyTitle: LocalizedStringKey
@@ -37,9 +38,16 @@ struct CategoryContentGrid<Item: Identifiable & Hashable & WatchlistFavoritable,
             // the tab bar only shows the section, not the category), so we surface
             // the category name as a leading-aligned heading in the content itself.
             #if os(tvOS)
-                Text(title)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    if let sourceName {
+                        Text(sourceName)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal)
                     .padding(.top, 40)
@@ -76,13 +84,18 @@ struct CategoryContentGrid<Item: Identifiable & Hashable & WatchlistFavoritable,
         // tvOS surfaces sorting through the tab bar's library controls instead of a
         // toolbar, mirroring the main browse views.
         #if !os(tvOS)
-            .navigationTitle(title)
+            .navigationTitle(navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     ContentSortMenu(sortRaw: $sortRaw)
                 }
             }
         #endif
+    }
+
+    private var navigationTitle: String {
+        guard let sourceName else { return title }
+        return "\(title) · \(sourceName)"
     }
 }
 
@@ -113,7 +126,7 @@ struct CategoryGridSection: View {
             LazyVGrid(columns: columns, spacing: CategoryTileMetrics.spacing) {
                 ForEach(categories) { category in
                     NavigationLink(value: category) {
-                        CategoryTile(name: category.name)
+                        CategoryTile(name: category.name, sourceName: category.playlist?.name)
                     }
                     .posterCardButtonStyle()
                 }
@@ -127,6 +140,7 @@ struct CategoryGridSection: View {
 /// genre browse grid — both surface a flat list of names that navigate onward.
 struct CategoryTile: View {
     let name: String
+    var sourceName: String? = nil
 
     // On the 10-foot UI the focus engine owns selection feedback: the focused
     // tile brightens to a solid plate with dark text (the standard tvOS card
@@ -137,13 +151,22 @@ struct CategoryTile: View {
     #endif
 
     var body: some View {
-        Text(name)
-            .font(CategoryTileMetrics.font)
-            .fontWeight(.semibold)
-            .lineLimit(2)
-            .minimumScaleFactor(0.7)
-            .multilineTextAlignment(.center)
-            .foregroundStyle(foreground)
+        VStack(spacing: 4) {
+            Text(name)
+                .font(CategoryTileMetrics.font)
+                .fontWeight(.semibold)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(foreground)
+            if let sourceName {
+                Text(sourceName)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundStyle(foreground.opacity(0.75))
+            }
+        }
             .frame(maxWidth: .infinity)
             .frame(height: CategoryTileMetrics.height)
             .padding(.horizontal)
@@ -213,10 +236,17 @@ struct CategoryPreviewRow<Item: Identifiable & Hashable & WatchlistFavoritable, 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(category.name)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(category.name)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.secondary)
+                    if let sourceName = category.playlist?.name {
+                        Text(sourceName)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
 
                 Spacer()
 
@@ -316,6 +346,7 @@ struct MovieCategoryView: View {
     private var grid: some View {
         let base = CategoryContentGrid(
             title: category.name,
+            sourceName: category.playlist?.name,
             items: movies,
             animationNamespace: animationNamespace,
             emptyTitle: "No Movies",

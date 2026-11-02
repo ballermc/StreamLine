@@ -31,6 +31,9 @@ nonisolated struct PlayableMedia: Identifiable, Hashable, Codable {
     /// list — Home, Search, recall — in which case the player surfs the
     /// channel's own category. See `LiveChannelNavigator.adjacentMedia`.
     let channelScope: LiveChannelScope?
+    /// Playlist scope used by virtual channel lists. An empty prefix includes
+    /// every playlist in the supplied scope; a provider prefix keeps free-tier lists scoped.
+    let channelScopePrefix: String?
     /// Per-request HTTP headers the engine must send to open `url` — today only
     /// WebDAV's `Authorization: Basic`. `nil` for every other source type: a
     /// blanket value would change the open path for every IPTV stream.
@@ -59,6 +62,7 @@ nonisolated struct PlayableMedia: Identifiable, Hashable, Codable {
         startTime: TimeInterval,
         contentRef: ContentRef,
         channelScope: LiveChannelScope? = nil,
+        channelScopePrefix: String? = nil,
         httpHeaders: [String: String]? = nil,
         recordingTimeline: RecordingTimeline? = nil,
         qualityAnchorID: String? = nil
@@ -72,6 +76,7 @@ nonisolated struct PlayableMedia: Identifiable, Hashable, Codable {
         self.startTime = startTime
         self.contentRef = contentRef
         self.channelScope = channelScope
+        self.channelScopePrefix = channelScopePrefix
         self.httpHeaders = httpHeaders
         self.recordingTimeline = recordingTimeline
         self.qualityAnchorID = qualityAnchorID
@@ -263,6 +268,7 @@ nonisolated extension PlayableMedia {
         stream: LiveStream,
         playlist: Playlist,
         scope: LiveChannelScope? = nil,
+        channelScopePrefix: String? = nil,
         client: XtreamClient = XtreamClient()
     ) -> PlayableMedia? {
         guard let url = LiveStreamURLResolver.playbackURL(for: stream, playlist: playlist, client: client) else { return nil }
@@ -276,6 +282,7 @@ nonisolated extension PlayableMedia {
             startTime: 0,
             contentRef: .live(stream.id),
             channelScope: scope,
+            channelScopePrefix: channelScopePrefix,
             httpHeaders: authHeaders(for: playlist)
         )
     }

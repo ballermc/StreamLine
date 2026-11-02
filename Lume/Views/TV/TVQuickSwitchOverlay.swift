@@ -2,9 +2,8 @@
 //  TVQuickSwitchOverlay.swift
 //  Lume
 //
-//  The tvOS quick-switch modal: playlists on the left, profiles on the right,
-//  a checkmark on the active row of each. Switching only — adding, editing and
-//  deleting stay in Settings, which remains the management surface.
+//  The tvOS quick-switch modal for profiles. Playlist catalogs are all active;
+//  playlist management stays in Settings.
 //
 //  Presented as a plain overlay, never a `fullScreenCover`: a tvOS cover always
 //  self-dismisses on Menu, and neither `onExitCommand` nor
@@ -20,34 +19,24 @@
         /// in rather than read from the environment: this modal is layered onto
         /// the tab content by `MainTabView`, not nested inside it.
         let router: DeepLinkRouter
-        /// Handed in for the same reason, and because `MainTabView` already holds
-        /// this fetch — a `@Query` here would register a second store observer
-        /// for the identical result.
-        let playlists: [Playlist]
-
         /// The roster comes from `ProfileManager` — `UserProfile` lives in the
         /// CloudKit-mirrored store, a separate container the browse `@Query`s
         /// don't bind to.
         @Environment(ProfileManager.self) private var profileManager: ProfileManager?
         @Environment(ParentalControls.self) private var parental: ParentalControls?
-        @Environment(PlaylistSwitchModel.self) private var playlistSwitch: PlaylistSwitchModel?
-        @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
 
         /// A profile awaiting PIN entry before the switch goes through.
         @State private var pendingSwitch: UserProfile?
-        @State private var showPaywall = false
 
         @FocusState private var focus: FocusTarget?
 
         private enum FocusTarget: Hashable {
-            case playlist(UUID)
             case profile(UUID)
         }
 
         var body: some View {
-            let playlistRows = QuickSwitchResolver.playlistRows(playlists, storedID: selectedPlaylistID)
             let profileRows = resolvedProfileRows
-            let focusTarget = initialFocus(playlists: playlistRows, profiles: profileRows)
+            let focusTarget = initialFocus(profiles: profileRows)
 
             return ZStack {
                 Color.black.opacity(0.92)
@@ -55,16 +44,13 @@
 
                 VStack(alignment: .leading, spacing: 28) {
                     Text(
-                        "Quick Switch",
-                        comment: "Title of the tvOS quick-switch modal, which switches the active playlist or profile"
+                        "Switch Profile",
+                        comment: "Title of the tvOS quick-switch modal for changing the active profile"
                     )
                     .font(.system(size: TVSettingsMetrics.titleFontSize, weight: .bold))
                     .foregroundStyle(.white)
 
-                    HStack(alignment: .top, spacing: 60) {
-                        playlistColumn(playlistRows)
-                        profileColumn(profileRows)
-                    }
+                    profileColumn(profileRows)
 
                     Text(
                         "Press Menu to close",
@@ -80,7 +66,6 @@
             .defaultFocus($focus, focusTarget, priority: .userInitiated)
             .onAppear { landInitialFocus(focusTarget) }
             .onExitCommand(perform: close)
-            .paywall(isPresented: $showPaywall, highlight: .multiplePlaylists)
             .pinPrompt(target: $pendingSwitch) { profile in
                 guard let profileManager else { return }
                 close()
@@ -90,29 +75,8 @@
 
         // MARK: - Columns
 
-        private func playlistColumn(_ rows: [QuickSwitchRow<Playlist>]) -> some View {
-            column("Playlists", width: TVSettingsMetrics.contentMaxWidth) {
-                if rows.isEmpty {
-                    emptyLabel(
-                        Text(
-                            "No playlists yet",
-                            comment: "Empty state shown in the playlists column of the tvOS quick-switch modal"
-                        )
-                    )
-                } else {
-                    ForEach(rows) { row in
-                        TVPlaylistSwitchRow(playlist: row.item, isActive: row.isCurrent, isLocked: row.isLocked) {
-                            select(playlist: row)
-                        }
-                        .focused($focus, equals: .playlist(row.id))
-                    }
-                }
-            }
-            .disabled(playlistSwitch?.isSwitching == true)
-        }
-
         private func profileColumn(_ rows: [QuickSwitchRow<UserProfile>]) -> some View {
-            column("Profiles", width: TVSettingsMetrics.sideColumnWidth) {
+            column("Profiles", width: TVSettingsMetrics.contentMaxWidth) {
                 if rows.isEmpty {
                     emptyLabel(
                         Text(
@@ -181,13 +145,7 @@
 
         // MARK: - Focus
 
-        private func initialFocus(
-            playlists: [QuickSwitchRow<Playlist>],
-            profiles: [QuickSwitchRow<UserProfile>]
-        ) -> FocusTarget? {
-            if let first = playlists.first {
-                return .playlist(first.id)
-            }
+        private func initialFocus(profiles: [QuickSwitchRow<UserProfile>]) -> FocusTarget? {
             return profiles.first.map { .profile($0.id) }
         }
 
@@ -210,30 +168,6 @@
         /// switch progress overlay never stacks on top of this one.
         private func close() {
             router.isQuickSwitchPresented = false
-        }
-
-        /// Picking the active row just closes the modal; a locked one opens the
-        /// paywall over it, so the modal is still there when the paywall closes.
-        private func select(playlist row: QuickSwitchRow<Playlist>) {
-            guard !row.isCurrent else {
-                close()
-                return
-            }
-            guard !row.isLocked else {
-                showPaywall = true
-                return
-            }
-            let id = row.item.id.uuidString
-            let name = row.item.name
-            close()
-            if let playlistSwitch {
-                // The viewer asked to be somewhere else now: land in the cached
-                // catalog and leave the due sync to the next launch / foreground.
-                playlistSwitch.deferNextDueSync()
-                playlistSwitch.switchTo(name: name) { selectedPlaylistID = id }
-            } else {
-                selectedPlaylistID = id
-            }
         }
 
         private func select(profile row: QuickSwitchRow<UserProfile>) {

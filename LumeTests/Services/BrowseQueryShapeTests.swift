@@ -119,7 +119,7 @@ struct BrowseQueryShapeTests {
     /// Needs an on-disk store: an in-memory one evaluates predicates without
     /// generating SQL, so a `starts(with:)` that CoreData cannot render would
     /// pass here and trap on device (see `SearchPredicateTests`).
-    @Test func `collection rails only fetch the active playlist`() throws {
+    @Test func `collection rails apply the supplied playlist scope in SQL`() throws {
         let container = try makeSQLiteContainer()
         let context = ModelContext(container)
         let mine = "\(UUID().uuidString)-"
@@ -147,9 +147,9 @@ struct BrowseQueryShapeTests {
         }
     }
 
-    /// The same property for the Live TV gates: a favorite in *another* playlist
-    /// must not light up this playlist's Favorites row.
-    @Test func `live tv gates only see the active playlist`() throws {
+    /// The same property for the Live TV gates: a favorite outside the supplied
+    /// playlist scope must not light up its Favorites row.
+    @Test func `live tv gates honor the supplied playlist scope`() throws {
         let container = try makeSQLiteContainer()
         let context = ModelContext(container)
         let mine = "\(UUID().uuidString)-"
@@ -244,7 +244,7 @@ struct BrowseQueryShapeTests {
     /// On disk for the usual reason — an in-memory store evaluates predicates
     /// without generating SQL, so a `starts(with:)` CoreData cannot render would
     /// pass here and trap on device.
-    @Test func `channel surfing only walks the active playlist`() throws {
+    @Test func `channel surfing stays within the provider category`() throws {
         let container = try makeSQLiteContainer()
         let context = ModelContext(container)
         let (mine, theirs) = (makePlaylist(in: context), makePlaylist(in: context))
@@ -270,32 +270,59 @@ struct BrowseQueryShapeTests {
         #expect(wrapped?.contentRef == .live(ours[0].id))
     }
 
-    /// Favorites and Recently Watched span every installed playlist, so they are
-    /// where the Swift-side prefix filter actually leaked.
-    @Test func `favorites surfing only walks the active playlist`() throws {
+    /// Virtual channel collections use the caller's unlocked playlist scope,
+    /// which can include every provider for Pro.
+    @Test func `favorites surfing spans the supplied unlocked playlist scope`() throws {
         let container = try makeSQLiteContainer()
         let context = ModelContext(container)
         let (mine, theirs) = (makePlaylist(in: context), makePlaylist(in: context))
+        theirs.serverURL = "http://other.example.com:8080"
 
         let ours = [1, 2].map { number -> LiveStream in
             let channel = insertChannel(number: number, playlist: mine, category: "mine", in: context)
             channel.isFavorite = true
             return channel
         }
-        insertChannel(number: 3, playlist: theirs, category: "theirs", in: context).isFavorite = true
+        let theirsChannel = insertChannel(number: 3, playlist: theirs, category: "theirs", in: context)
+        theirsChannel.isFavorite = true
         try context.save()
 
-        let first = try #require(PlayableMedia.from(stream: ours[0], playlist: mine, scope: .favorites))
+        let first = try #require(PlayableMedia.from(
+            stream: ours[0], playlist: mine, scope: .favorites, channelScopePrefix: ""
+        ))
         let next = LiveChannelNavigator.adjacentMedia(
             for: first, offset: 1, sort: .playlist, restriction: ContentRestriction(), in: context
         )
         #expect(next?.contentRef == .live(ours[1].id))
 
-        let second = try #require(PlayableMedia.from(stream: ours[1], playlist: mine, scope: .favorites))
-        let wrapped = LiveChannelNavigator.adjacentMedia(
+        let second = try #require(PlayableMedia.from(
+            stream: ours[1], playlist: mine, scope: .favorites, channelScopePrefix: ""
+        ))
+        let nextProvider = LiveChannelNavigator.adjacentMedia(
             for: second, offset: 1, sort: .playlist, restriction: ContentRestriction(), in: context
         )
+        #expect(nextProvider?.contentRef == .live(theirsChannel.id))
+        #expect(nextProvider?.channelScopePrefix == "")
+        #expect(nextProvider?.url.host == "other.example.com")
+
+        let third = try #require(nextProvider)
+        let wrapped = LiveChannelNavigator.adjacentMedia(
+            for: third, offset: 1, sort: .playlist, restriction: ContentRestriction(), in: context
+        )
         #expect(wrapped?.contentRef == .live(ours[0].id))
+        #expect(wrapped?.channelScopePrefix == "")
+
+        let freeFirst = try #require(PlayableMedia.from(
+            stream: ours[0],
+            playlist: mine,
+            scope: .favorites,
+            channelScopePrefix: "\(mine.id.uuidString)-"
+        ))
+        let freeNext = LiveChannelNavigator.adjacentMedia(
+            for: freeFirst, offset: 1, sort: .playlist, restriction: ContentRestriction(), in: context
+        )
+        #expect(freeNext?.contentRef == .live(ours[1].id))
+        #expect(freeNext?.channelScopePrefix == "\(mine.id.uuidString)-")
     }
 
     /// Episode and channel neighbours both resolve the owning playlist from the

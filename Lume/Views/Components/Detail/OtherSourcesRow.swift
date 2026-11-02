@@ -7,11 +7,9 @@
 //  with the owning playlist's name. The badge overlay is shared with the tvOS
 //  rails via `posterBadge(_:)`.
 //
-//  Deliberately no favorite menu, unlike the sibling "You May Also Like" rail:
-//  an entry here can be the same title on a *different* playlist, while the
-//  Favorites rail is scoped to the active playlist, so favoriting that copy
-//  would create a favorite the user can neither see nor undo on the rail they
-//  were just looking at.
+//  Entries remain separate from the current title because their ids carry the
+//  owning playlist prefix; choosing an alternate source never changes the
+//  provider used by the currently open detail screen.
 //
 
 import SwiftUI

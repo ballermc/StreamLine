@@ -109,7 +109,7 @@ nonisolated struct TMDBClient {
     /// carousel needs (backdrop, title, overview), in popularity order.
     ///
     /// Fetches up to `pages` pages (20 titles each) so the home screen has a
-    /// larger pool to match against the active playlist — the trending row only
+    /// larger pool to match against unlocked sources — the trending row only
     /// shows titles already in the library, so a wider net surfaces more of them.
     func trending(_ media: MediaType, timeWindow: TimeWindow = .week, pages: Int = 5) async throws -> [TrendingTitle] {
         let basePath = "/trending/\(media.rawValue)/\(timeWindow.rawValue)"

@@ -34,7 +34,7 @@ struct PlaylistSyncAccessory: View {
                     .foregroundStyle(state.tint)
                     .accessibilityLabel(Text(state.statusLabel))
             }
-        case .overdue, .awaitingSelection, .synced, .disabled:
+        case .overdue, .synced, .disabled:
             EmptyView()
         }
     }

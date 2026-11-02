@@ -49,7 +49,6 @@ nonisolated enum LiveTVLayoutMode: String, CaseIterable, Identifiable {
 struct LiveTVView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.contentRestriction) private var restriction
-    @Environment(PlaylistSwitchModel.self) private var playlistSwitch: PlaylistSwitchModel?
     #if os(macOS)
         @Environment(\.openWindow) private var openWindow
     #endif
@@ -62,7 +61,6 @@ struct LiveTVView: View {
     /// is `LiveTVSections`' job; it owns the bounded probes that answer it.
     @State private var categoryMemo = LiveTVCategoryMemo()
 
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
     /// Holds the selection so it survives the tab being unmounted; the
     /// fallbacks serve previews, which have no router.
     @Environment(DeepLinkRouter.self) private var tabRouter: DeepLinkRouter?
@@ -105,14 +103,16 @@ struct LiveTVView: View {
     @ViewBuilder
     private func detail(for section: LiveTVSection) -> some View {
         let playlist = playlist(for: section)
-        let prefix = playlist.map { "\($0.id.uuidString)-" } ?? ""
+        let prefix = playlist.map { "\($0.id.uuidString)-" } ?? playlistPrefix
         Group {
             if layoutMode == .guide {
                 EPGGuideView(
                     scope: section.scope,
                     playlistPrefix: prefix,
                     sort: contentSort,
-                    onPlay: { playChannel($0, scope: section.scope, playlist: playlist) },
+                    onPlay: {
+                        playChannel($0, scope: section.scope, playlist: playlist, playlistPrefix: prefix)
+                    },
                     onPlayCatchup: { playCatchup($0, cell: $1, playlist: playlist) },
                     onStartMultiView: { startMultiView(with: $0, playlist: playlist) }
                 )
@@ -136,7 +136,9 @@ struct LiveTVView: View {
                 sort: contentSort,
                 sourceType: playlist?.knownSourceType,
                 onStartMultiView: { startMultiView(with: $0, playlist: playlist) },
-                onPlay: { playChannel($0, scope: section.scope, playlist: playlist) }
+                onPlay: {
+                    playChannel($0, scope: section.scope, playlist: playlist, playlistPrefix: playlistPrefix)
+                }
             )
             .frame(maxWidth: .infinity)
         #else
@@ -145,7 +147,9 @@ struct LiveTVView: View {
                 playlistPrefix: playlistPrefix,
                 sort: contentSort,
                 onStartMultiView: { startMultiView(with: $0, playlist: playlist) },
-                onPlay: { playChannel($0, scope: section.scope, playlist: playlist) }
+                onPlay: {
+                    playChannel($0, scope: section.scope, playlist: playlist, playlistPrefix: playlistPrefix)
+                }
             )
         #endif
     }
@@ -159,33 +163,31 @@ struct LiveTVView: View {
                         systemImage: "antenna.radiowaves.left.and.right",
                         description: Text("Add a playlist in Settings to start watching live TV")
                     )
-                } else if categorySections.isEmpty || sourceHasNoLiveChannels {
+                } else if categorySections.isEmpty {
                     VStack(spacing: 20) {
-                        LiveTVEmptyState(sourceType: activePlaylist?.knownSourceType)
+                        LiveTVEmptyState(sourceType: emptyStateSourceType)
                     }
                 } else {
                     // The rail resolves in a child view: gating the two virtual
-                    // sections is a pair of playlist-scoped `LIMIT 1` probes, and
+                    // sections is a pair of source-scoped `LIMIT 1` probes, and
                     // a `@Query` carries that scope only when its descriptor is
-                    // built in an `init` the active playlist reaches.
+                    // built in this child's initializer.
                     LiveTVSections(
                         playlistPrefix: playlistPrefix,
                         restriction: restriction,
                         categorySections: categorySections
                     ) { sections in
                         layout(for: sections, categoryGroups: categoryGroups)
-                            .task(id: playlistPrefix) { seedSelection(from: sections) }
+                            .task(id: playlistScopeKey) { seedSelection(from: sections) }
                     }
                 }
             }
             .libraryToolbar(config: LibraryToolbarConfiguration(
-                playlists: playlists,
-                selectedPlaylistID: $selectedPlaylistID,
                 categorySortRaw: $categorySortRaw,
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
                 showingSettings: $showingSettings,
-                activePlaylist: activePlaylist
+                syncPlaylist: syncPlaylist
             ))
             #if !os(tvOS)
             .toolbar {
@@ -201,12 +203,9 @@ struct LiveTVView: View {
             #endif
             // After `libraryToolbar`, so Recordings and Multi-View lead the bar
             // as their own cluster, never beside Settings. Guide or List is
-            // chosen in Settings › Live TV on every platform. The switcher's
-            // title (shown by `libraryToolbar` with several playlists) tells
-            // the cluster how much room is left for it.
+            // chosen in Settings › Live TV on every platform.
             .liveTVToolbarCluster(
-                multiViewAvailable: !playlists.isEmpty && !categories.isEmpty,
-                switcherTitle: playlists.count > 1 ? activePlaylist?.name : nil
+                multiViewAvailable: !playlists.isEmpty && !categories.isEmpty
             ) {
                 openMultiView()
             }
@@ -323,7 +322,7 @@ struct LiveTVView: View {
             displayed: LiveTVSection?
         ) -> some View {
             let playlist = displayed.flatMap(playlist(for:))
-            let prefix = playlist.map { "\($0.id.uuidString)-" } ?? ""
+            let prefix = playlist.map { "\($0.id.uuidString)-" } ?? playlistPrefix
             TVLiveTVScreen(
                 sections: sections,
                 categoryGroups: categoryGroups,
@@ -331,15 +330,19 @@ struct LiveTVView: View {
                 displayedSection: displayed,
                 contentSort: contentSort,
                 onRefreshAll: { showingRefreshAll = true },
-                onPlay: { playChannel($0, scope: displayed?.scope, playlist: playlist) },
+                onPlay: {
+                    playChannel($0, scope: displayed?.scope, playlist: playlist, playlistPrefix: prefix)
+                },
                 onPlayCatchup: { playCatchup($0, cell: $1, playlist: playlist) },
                 onStartMultiView: { startMultiView(with: $0, playlist: playlist) },
                 playlistPrefix: prefix,
                 sourceType: playlist?.knownSourceType,
                 layoutMode: layoutMode,
                 preview: EPGGuidePreviewInputs(
-                    media: { [playlist] stream in
-                        playlist.flatMap { PlayableMedia.from(stream: stream, playlist: $0) }
+                    media: { stream in
+                        let owner = playlists.owner(ofContentID: stream.id) ?? playlist
+                        guard let owner, !playlists.isLocked(owner, isPremium: premium.isPremium) else { return nil }
+                        return PlayableMedia.from(stream: stream, playlist: owner)
                     },
                     playlistID: playlist?.id,
                     controller: guidePreview,
@@ -357,10 +360,15 @@ struct LiveTVView: View {
         }
     #endif
 
-    /// The playlist whose content is currently shown, resolved from the global
-    /// selection. Falls back to the first playlist until the user picks one.
-    private var activePlaylist: Playlist? {
-        playlists.active(for: selectedPlaylistID)
+    /// The oldest unlocked source remains the target of single-playlist controls.
+    private var syncPlaylist: Playlist? {
+        playlists.unlocked(isPremium: premium.isPremium).oldest
+    }
+
+    private var emptyStateSourceType: PlaylistSourceType? {
+        let sources = playlists.unlocked(isPremium: premium.isPremium)
+        guard sources.count == 1 else { return nil }
+        return sources[0].knownSourceType
     }
 
     private var refreshablePlaylists: [Playlist] {
@@ -370,13 +378,17 @@ struct LiveTVView: View {
 
     /// A non-IPTV source gets its source-specific empty state only when no
     /// live-capable provider contributes categories to the shared browser.
-    private var sourceHasNoLiveChannels: Bool {
-        activePlaylist?.knownSourceType.map { !$0.canCarryLiveChannels } == true && categorySections.isEmpty
+    /// Empty means all unlocked sources; on the free plan it scopes to the
+    /// oldest playlist.
+    private var playlistPrefix: String {
+        playlists.contentScopePrefix(isPremium: premium.isPremium)
     }
 
-    /// The id prefix every Category / LiveStream of the active playlist shares.
-    private var playlistPrefix: String {
-        activePlaylist.map { "\($0.id.uuidString)-" } ?? ""
+    private var playlistScopeKey: String {
+        playlists.unlocked(isPremium: premium.isPremium)
+            .map { $0.id.uuidString }
+            .sorted()
+            .joined(separator: ",")
     }
 
     /// Visible Live TV categories grouped by provider. The sort is applied
@@ -415,7 +427,10 @@ struct LiveTVView: View {
             selectedSection = section
             return
         }
-        guard let playlist = playlist(for: section) else { return }
+        guard let playlist = playlist(for: section) else {
+            selectedSection = section
+            return
+        }
         guard !playlists.isLocked(playlist, isPremium: premium.isPremium) else {
             showingPaywall = true
             return
@@ -424,7 +439,7 @@ struct LiveTVView: View {
     }
 
     private func playlist(for section: LiveTVSection) -> Playlist? {
-        guard case let .category(category) = section else { return activePlaylist }
+        guard case let .category(category) = section else { return nil }
         return playlists.first { category.id.hasPrefix("\($0.id.uuidString)-") }
     }
 
@@ -436,9 +451,8 @@ struct LiveTVView: View {
         }
     }
 
-    /// Points the rail at the active provider's first available section. The
-    /// category groups remain visible across providers; only an explicit
-    /// playlist switch resets the selection.
+    /// Points the rail at the first available section when its source scope
+    /// changes.
     private func seedSelection(from sections: [LiveTVSection]) {
         if seededPrefix != nil, seededPrefix != playlistPrefix {
             selectedSection = preferredSection(in: sections)
@@ -476,15 +490,27 @@ struct LiveTVView: View {
 
     /// `scope` is the section the channel was picked from; it travels with the
     /// media so in-player channel surfing stays inside that list.
-    private func playChannel(_ stream: LiveStream, scope: LiveChannelScope?, playlist: Playlist?) {
-        guard let playlist,
-              let media = PlayableMedia.from(stream: stream, playlist: playlist, scope: scope) else { return }
+    private func playChannel(
+        _ stream: LiveStream,
+        scope: LiveChannelScope?,
+        playlist: Playlist?,
+        playlistPrefix: String
+    ) {
+        guard let owner = playlists.owner(ofContentID: stream.id) ?? playlist,
+              !playlists.isLocked(owner, isPremium: premium.isPremium),
+              let media = PlayableMedia.from(
+                  stream: stream,
+                  playlist: owner,
+                  scope: scope,
+                  channelScopePrefix: playlistPrefix
+              ) else { return }
         present(media)
     }
 
     /// Replays a past programme from the channel's catch-up archive.
     private func playCatchup(_ stream: LiveStream, cell: EPGProgramCell, playlist: Playlist?) {
-        guard let playlist,
+        guard let playlist = playlists.owner(ofContentID: stream.id) ?? playlist,
+              !playlists.isLocked(playlist, isPremium: premium.isPremium),
               let media = PlayableMedia.catchup(
                   stream: stream,
                   playlist: playlist,
@@ -498,7 +524,8 @@ struct LiveTVView: View {
     /// Opens Multi-View on a channel picked from the list, so the grid starts
     /// with something playing rather than two empty tiles.
     private func startMultiView(with stream: LiveStream, playlist: Playlist?) {
-        guard let playlist,
+        guard let playlist = playlists.owner(ofContentID: stream.id) ?? playlist,
+              !playlists.isLocked(playlist, isPremium: premium.isPremium),
               let media = PlayableMedia.from(stream: stream, playlist: playlist)
         else {
             return

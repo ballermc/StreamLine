@@ -20,7 +20,7 @@ struct MoviesView: View {
     @Query(filter: #Predicate<Category> { $0.typeRaw == "vod" && $0.isHidden == false })
     private var categories: [Category]
 
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
+    @State private var premium = PremiumManager.shared
     @State private var showingSync = false
     @State private var showingSettings = false
     @State private var genres: [String] = []
@@ -91,7 +91,7 @@ struct MoviesView: View {
                         .padding(.vertical)
                     }
                     .browseActivity()
-                    .task(id: playlistPrefix) {
+                    .task(id: playlistScopeKey) {
                         genres = await GenreDerivation.movieGenres(in: modelContext.container, playlistPrefix: playlistPrefix, restriction: restriction)
                     }
                 }
@@ -99,13 +99,11 @@ struct MoviesView: View {
             .platformNavigationTitle("Movies")
             .profileMenuToolbar()
             .libraryToolbar(config: LibraryToolbarConfiguration(
-                playlists: playlists,
-                selectedPlaylistID: $selectedPlaylistID,
                 categorySortRaw: $categorySortRaw,
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
                 showingSettings: $showingSettings,
-                activePlaylist: activePlaylist
+                syncPlaylist: syncPlaylist
             ))
             .navigationDestination(for: Category.self) { category in
                 MovieCategoryView(category: category, animationNamespace: animationNamespace)
@@ -132,25 +130,34 @@ struct MoviesView: View {
         return Binding(get: { router.moviesPath }, set: { router.moviesPath = $0 })
     }
 
-    /// The playlist whose content is currently shown, resolved from the global
-    /// selection. Falls back to the first playlist until the user picks one.
-    private var activePlaylist: Playlist? {
-        playlists.active(for: selectedPlaylistID)
+    /// The oldest available playlist remains the target of the single-playlist
+    /// Sync action; browsing itself includes every unlocked source.
+    private var syncPlaylist: Playlist? {
+        playlists.unlocked(isPremium: premium.isPremium)
+            .min { ($0.addedAt, $0.id.uuidString) < ($1.addedAt, $1.id.uuidString) }
     }
 
-    /// The id prefix every Movie/Category of the active playlist shares. Used to
-    /// scope the cross-category collection rows in-memory.
+    /// Empty means all source catalogs; on the free plan this scopes to its one
+    /// unlocked playlist.
     private var playlistPrefix: String {
-        activePlaylist.map { "\($0.id.uuidString)-" } ?? ""
+        playlists.contentScopePrefix(isPremium: premium.isPremium)
     }
 
-    /// Categories scoped to the active playlist. The `@Query` fetches every
-    /// playlist's categories (SwiftData can't parameterize a `@Query` on view
-    /// state), so we isolate by the playlist-prefixed category `id` here.
+    private var playlistScopeKey: String {
+        playlists.unlocked(isPremium: premium.isPremium)
+            .map { $0.id.uuidString }
+            .sorted()
+            .joined(separator: ",")
+    }
+
+    /// Category IDs are provider-prefixed, so identical category names from
+    /// different sources remain separate browse entries.
     private var sortedCategories: [Category] {
-        guard let playlistId = activePlaylist?.id else { return [] }
-        let prefix = "\(playlistId.uuidString)-"
-        return categorySort.sort(categories.filter { $0.id.hasPrefix(prefix) && !restriction.hides(categoryID: $0.id) })
+        guard !playlists.isEmpty else { return [] }
+        return categorySort.sort(categories.filter {
+            (playlistPrefix.isEmpty || $0.id.hasPrefix(playlistPrefix))
+                && !restriction.hides(categoryID: $0.id)
+        })
     }
 }
 

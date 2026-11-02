@@ -224,10 +224,8 @@ struct SyncFrequencyTests {
 
     // MARK: - AutoSync scoping
 
-    @Test func `auto sync defers a due playlist that is not on screen`() {
-        // The whole point: with several playlists configured, launching should
-        // not queue a blocking cover for each of them in turn.
-        #expect(!AutoSync.shouldSync(
+    @Test func `auto sync refreshes a due playlist regardless of selection`() {
+        #expect(AutoSync.shouldSync(
             AutoSync.Candidate(
                 syncEnabled: true,
                 status: .idle,
@@ -256,10 +254,8 @@ struct SyncFrequencyTests {
         ))
     }
 
-    @Test func `auto sync defers a never-synced playlist it did not just add`() {
-        // iCloud brings every playlist to a new device never-synced; syncing
-        // each wherever it stands would put one cover per playlist back.
-        #expect(!AutoSync.shouldSync(
+    @Test func `auto sync refreshes a never-synced playlist regardless of selection`() {
+        #expect(AutoSync.shouldSync(
             AutoSync.Candidate(
                 syncEnabled: true,
                 status: .idle,
@@ -272,11 +268,9 @@ struct SyncFrequencyTests {
         ))
     }
 
-    @Test func `auto sync runs a deferred playlist once it becomes active`() {
-        // The playlist-switch trigger is what picks up whatever launch skipped,
-        // so the same playlist must flip to eligible on nothing but `isActive`.
+    @Test func `auto sync ignores legacy playlist selection flags`() {
         let stale = Date().addingTimeInterval(-48 * 60 * 60)
-        #expect(!AutoSync.shouldSync(
+        #expect(AutoSync.shouldSync(
             AutoSync.Candidate(
                 syncEnabled: true,
                 status: .idle,
@@ -300,10 +294,8 @@ struct SyncFrequencyTests {
         ))
     }
 
-    @Test func `auto sync defers a failed playlist that is not on screen`() {
-        // An error still leaves a cached catalog behind, so a retry can wait for
-        // the viewer to go there — unlike the never-synced case above.
-        #expect(!AutoSync.shouldSync(
+    @Test func `auto sync retries a failed playlist regardless of selection`() {
+        #expect(AutoSync.shouldSync(
             AutoSync.Candidate(
                 syncEnabled: true,
                 status: .error,

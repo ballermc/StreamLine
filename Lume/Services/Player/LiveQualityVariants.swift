@@ -72,7 +72,11 @@ nonisolated enum LiveQualityVariants {
         let client = XtreamClient()
         let options = rows.compactMap { row -> LiveQualityVariantOption? in
             guard let target = PlayableMedia.from(
-                stream: row.stream, playlist: playlist, scope: media.channelScope, client: client
+                stream: row.stream,
+                playlist: playlist,
+                scope: media.channelScope,
+                channelScopePrefix: media.channelScopePrefix,
+                client: client
             ) else { return nil }
             return LiveQualityVariantOption(
                 id: row.stream.id,

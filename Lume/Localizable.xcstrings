@@ -55716,7 +55716,7 @@
       }
     },
     "Quick Switch" : {
-      "comment" : "Title of the tvOS quick-switch modal, which switches the active playlist or profile",
+      "comment" : "Title of the tvOS quick-switch modal, which switches the active profile",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

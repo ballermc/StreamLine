@@ -11,8 +11,6 @@ import SwiftUI
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    // Optional so previews (which don't inject it) don't crash.
-    @Environment(PlaylistSwitchModel.self) private var playlistSwitch: PlaylistSwitchModel?
     @Environment(ProfileManager.self) private var profileManager: ProfileManager?
     @Query private var playlists: [Playlist]
     /// Categories marked restricted, and categories hidden in Content
@@ -22,7 +20,6 @@ struct MainTabView: View {
     @Query(filter: #Predicate<Category> { $0.isHidden }) private var hiddenCategories: [Category]
 
     @AppStorage(SyncFrequency.storageKey) private var syncFrequencyRaw: String = SyncFrequency.defaultValue.rawValue
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
     /// Whether the Sports tab appears in the tab bar (Settings toggle). When off,
     /// the hub is still reachable from the Home rail header.
     @AppStorage(SportsSyncService.tabEnabledKey) private var sportsTabEnabled = SportsSyncService.tabEnabledDefault
@@ -64,23 +61,18 @@ struct MainTabView: View {
         SyncFrequency.resolve(syncFrequencyRaw)
     }
 
-    /// The playlist the content tabs are showing, resolved rather than read raw:
-    /// the stored id can name a deleted playlist, in which case the app falls
-    /// back to the same playlist every other surface does, and auto-sync has to
-    /// follow it there.
-    private var activePlaylistID: String {
-        playlists.activeID(for: selectedPlaylistID)
-    }
-
-    /// Whether `tab` is in the tab bar: the active playlist can hide Movies,
-    /// Series and Live TV (Settings › Library › Tabs).
+    /// A tab remains available when at least one unlocked source enables it.
     private func showsTab(_ tab: AppTab) -> Bool {
-        playlists.active(for: selectedPlaylistID).showsTab(tab)
+        playlists.unlocked().contains { $0.showsTab(tab) }
     }
 
-    /// The tabs the active playlist hides, as a value `onChange` can watch.
+    /// The aggregate tab settings, keyed by source so a change in any provider
+    /// revalidates the selected tab.
     private var hiddenTabsRaw: String {
-        playlists.active(for: selectedPlaylistID)?.hiddenTabsRaw ?? ""
+        playlists.unlocked()
+            .map { "\($0.id.uuidString):\($0.hiddenTabsRaw)" }
+            .sorted()
+            .joined(separator: "|")
     }
 
     /// UI tests seed a fake playlist; auto-sync would present a blocking cover
@@ -99,7 +91,6 @@ struct MainTabView: View {
     private var hasOwnPresentation: Bool {
         activeSyncPlaylist != nil
             || showsDownloads
-            || playlistSwitch?.isSwitching == true
             || profileManager?.isSwitching == true
     }
 
@@ -143,8 +134,7 @@ struct MainTabView: View {
             .onChange(of: router.selectedTab) {
                 ContentIndexingService.shared.noteUserInteraction()
             }
-            // Hiding the tab on screen, or switching to a playlist that hides
-            // it, would leave the selection pointing at nothing.
+            // A settings change can hide the selected tab.
             .onChange(of: hiddenTabsRaw, initial: true) {
                 if !showsTab(router.selectedTab) {
                     router.selectedTab = .home
@@ -163,19 +153,9 @@ struct MainTabView: View {
             }
         #endif
             .task(id: playlists.count) {
-                // On launch (and whenever a playlist is added) sync the active
-                // playlist if it is due, plus any playlist that has never synced.
+                // On launch (and whenever a playlist is added), queue every due,
+                // unlocked playlist.
                 enqueueDueSyncs(playlists)
-            }
-            .onChange(of: selectedPlaylistID) {
-                // On playlist switch, sync the newly selected one if it's due —
-                // unless the switch asked to land in the cached catalog instead.
-                // This is also where a playlist deferred at launch for not being
-                // on screen gets its turn.
-                guard playlistSwitch?.consumeDeferredDueSync() != true else { return }
-                if let playlist = playlists.active(for: selectedPlaylistID) {
-                    enqueueDueSyncs([playlist])
-                }
             }
             .onChange(of: scenePhase) { _, phase in
                 // Returning to the foreground re-checks staleness — for a long-lived
@@ -198,7 +178,7 @@ struct MainTabView: View {
             }
             .downloadsSheet(isPresented: $showsDownloads)
             .lumeCloudPairingSheet(router: router, rootIsCovered: hasOwnPresentation)
-            .switchProgressOverlay(playlist: playlistSwitch, profile: profileManager)
+            .profileSwitchProgressOverlay(profile: profileManager)
             // The one fire point for the rating sheet. Here rather than at the
             // eleven player presentation sites: this view is the browse root,
             // so reaching it *is* the "player gone, nothing over it" condition.
@@ -231,7 +211,7 @@ struct MainTabView: View {
                     // Built only while presented: a permanently mounted list of
                     // focusable rows would regrow the focus/AX responder walk
                     // that `activeOnly(_:selection:)` exists to contain.
-                    TVQuickSwitchOverlay(router: router, playlists: playlists)
+                    TVQuickSwitchOverlay(router: router)
                         .transition(.opacity)
                 }
             }
@@ -294,9 +274,8 @@ struct MainTabView: View {
 
         /// Whether something layered over the tabs owns the screen: tvOS focus is
         /// not clipped by z-order, so the tab bar and the cards behind a plain
-        /// overlay would still take presses. The playlist switch is deliberately
-        /// absent — it settles in under half a second, and disabling the tabs for
-        /// it would move focus and hand it back somewhere else.
+        /// overlay would still take presses. Profile switching owns the focus
+        /// transition.
         private var blockingOverlayOwnsScreen: Bool {
             router.isMultiViewPresented
                 || activeSyncPlaylist != nil
@@ -312,7 +291,7 @@ struct MainTabView: View {
                 return true
             }
             guard !blockingOverlayOwnsScreen else { return false }
-            return !playlists.isEmpty || profileManager?.isReady == true
+            return profileManager?.isReady == true
         }
 
         /// tvOS `TabView` keeps every *visited* tab's view hierarchy alive, and
@@ -468,15 +447,14 @@ struct MainTabView: View {
         router.seriesPath.append(series)
     }
 
-    /// Finds a movie by `tmdbId`, preferring the active playlist but falling back
-    /// to any other playlist's copy the plan unlocks. Restricted categories stay
-    /// hidden for a child profile.
+    /// Finds a movie by `tmdbId` among the sources the plan unlocks. Restricted
+    /// categories stay hidden for a child profile.
     private func resolveMovie(tmdbId: Int) -> Movie? {
         let descriptor = FetchDescriptor<Movie>(predicate: #Predicate { $0.tmdbId == tmdbId })
         let restriction = contentRestriction
         let matches = ((try? modelContext.fetch(descriptor)) ?? [])
             .filter { !restriction.hides(categoryID: $0.categoryId) && !playlists.isLocked(contentID: $0.id) }
-        return matches.first { belongsToActivePlaylist($0.id) } ?? matches.first
+        return matches.first { belongsToUnlockedPlaylist($0.id) } ?? matches.first
     }
 
     private func resolveSeries(tmdbId: Int) -> Series? {
@@ -484,12 +462,12 @@ struct MainTabView: View {
         let restriction = contentRestriction
         let matches = ((try? modelContext.fetch(descriptor)) ?? [])
             .filter { !restriction.hides(categoryID: $0.categoryId) && !playlists.isLocked(contentID: $0.id) }
-        return matches.first { belongsToActivePlaylist($0.id) } ?? matches.first
+        return matches.first { belongsToUnlockedPlaylist($0.id) } ?? matches.first
     }
 
-    private func belongsToActivePlaylist(_ id: String) -> Bool {
-        guard let activePlaylist = playlists.active(for: selectedPlaylistID) else { return true }
-        return id.hasPrefix("\(activePlaylist.id.uuidString)-")
+    private func belongsToUnlockedPlaylist(_ id: String) -> Bool {
+        let prefix = playlists.contentScopePrefix()
+        return prefix.isEmpty || id.hasPrefix(prefix)
     }
 
     // MARK: - Automatic sync
@@ -511,7 +489,7 @@ struct MainTabView: View {
 
     private func shouldAutoSync(_ playlist: Playlist) -> Bool {
         AutoSync.shouldSync(
-            playlist.autoSyncCandidate(activeID: activePlaylistID),
+            playlist.autoSyncCandidate(),
             frequency: syncFrequency,
             alreadyStarted: autoSyncAttempted.contains(playlist.id)
         )

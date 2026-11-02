@@ -17,15 +17,12 @@ struct SearchView: View {
     #endif
     @Query private var allPlaylists: [Playlist]
 
-    /// The playlists search may reach. Without Pro that is the free one only,
-    /// so "Search All Playlists" never surfaces a locked playlist's catalog.
+    /// The playlists search may reach. Without Pro this is the free plan's
+    /// single unlocked source.
     private var playlists: [Playlist] {
         allPlaylists.unlocked()
     }
 
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
-    @AppStorage(SearchSettings.searchAllPlaylistsKey)
-    private var searchAllPlaylists = SearchSettings.searchAllPlaylistsDefault
     @State private var searchText = ""
     @State private var debouncedSearchText = ""
     @State private var selectedFilter: ContentFilter = .all
@@ -156,7 +153,11 @@ struct SearchView: View {
                 guard !Task.isCancelled else { return }
                 debouncedSearchText = trimmed
             }
-            .task(id: SearchKey(text: debouncedSearchText, filter: selectedFilter, allPlaylists: searchAllPlaylists)) {
+            .task(id: SearchKey(
+                text: debouncedSearchText,
+                filter: selectedFilter,
+                playlistIDs: playlists.map { $0.id.uuidString }.sorted()
+            )) {
                 // Re-run whenever the settled query or the filter changes.
                 // Filter changes are instant (no debounce on the segmented control).
                 await updateResults()
@@ -172,27 +173,16 @@ struct SearchView: View {
 
     // MARK: - Playback
 
-    private var activePlaylist: Playlist? {
-        playlists.active(for: selectedPlaylistID)
-    }
-
-    /// The owning playlist's name, for rows that could have come from any of
-    /// them. Only while searching across several playlists: with one playlist
-    /// in play it's the same badge on every row, and the point of it is telling
-    /// two identically-named rows from different providers apart.
+    /// The owning playlist's name distinguishes identical titles from different
+    /// provider catalogs.
     private func playlistName(for result: SearchResult) -> String? {
-        guard searchAllPlaylists, playlists.count > 1 else { return nil }
+        guard playlists.count > 1 else { return nil }
         return playlists.owner(ofContentID: result.contentID)?.name
     }
 
     private func playChannel(_ stream: LiveStream) {
-        // Cross-playlist search surfaces channels the active playlist can't
-        // stream: a live URL is built from its playlist's server, credentials
-        // and portal, so playing a foreign channel with the active playlist
-        // asks the wrong provider for it. Stream ids are per-provider integers,
-        // so that doesn't reliably fail — it can quietly play whichever channel
-        // holds the same id over there.
-        guard let playlist = playlists.owner(ofContentID: stream.id) ?? activePlaylist,
+        guard let playlist = playlists.owner(ofContentID: stream.id),
+              !playlists.isLocked(playlist),
               let media = PlayableMedia.from(stream: stream, playlist: playlist) else { return }
         if ExternalPlayback.open(media) { return }
         #if os(macOS)
@@ -217,8 +207,11 @@ struct SearchView: View {
             results = []
             return
         }
+        guard !playlists.isEmpty else {
+            results = []
+            return
+        }
 
-        let playlist = activePlaylist
         let filter = selectedFilter
         let wantMovies = filter == .all || filter == .movies
         let wantSeries = filter == .all || filter == .series
@@ -230,14 +223,13 @@ struct SearchView: View {
         // *is* synced) and every other source type use the local predicate
         // search. Cross-playlist search still runs the local pass too, so other
         // playlists' synced content is included.
-        let usePortalForVODSeries = playlist?.sourceType == .stalker && !searchAllPlaylists
         let portal = await portalSearch(query: query, wantMovies: wantMovies, wantSeries: wantSeries)
         guard !Task.isCancelled else { return }
 
         let localHits = await localSearch(
-            query: query, playlist: playlist,
-            wantMovies: wantMovies && !usePortalForVODSeries,
-            wantSeries: wantSeries && !usePortalForVODSeries,
+            query: query,
+            wantMovies: wantMovies,
+            wantSeries: wantSeries,
             wantLive: wantLive
         )
         guard !Task.isCancelled else { return }
@@ -248,9 +240,8 @@ struct SearchView: View {
     /// Portal search hits (element ids) from every Stalker playlist in scope.
     /// A Stalker catalog's movies and series are never synced into the store,
     /// so the portal's own search API is the only way to reach them — which
-    /// left a non-active Stalker playlist invisible to search whatever
-    /// "Search All Playlists" was set to, since the local pass has nothing of
-    /// its VOD to find.
+    /// left VOD from additional unlocked Stalker playlists invisible to search,
+    /// since the local pass has nothing of their VOD to find.
     private func portalSearch(
         query: String, wantMovies: Bool, wantSeries: Bool
     ) async -> (movies: [String], series: [String]) {
@@ -276,31 +267,24 @@ struct SearchView: View {
         return (interleaved(movies, limit: resultLimit), interleaved(series, limit: resultLimit))
     }
 
-    /// The Stalker playlists this search asks directly: all of them while
-    /// searching across playlists, otherwise the active one if it happens to
-    /// be a portal.
+    /// Every unlocked Stalker playlist, queried one at a time.
     private var portalPlaylists: [Playlist] {
-        let candidates = searchAllPlaylists ? playlists : [activePlaylist].compactMap(\.self)
-        return candidates.filter { $0.sourceType == .stalker }
+        playlists.filter { $0.sourceType == .stalker }
     }
 
     /// Bounded local predicate search, run off the main thread.
     private func localSearch(
-        query: String, playlist: Playlist?, wantMovies: Bool, wantSeries: Bool, wantLive: Bool
+        query: String, wantMovies: Bool, wantSeries: Bool, wantLive: Bool
     ) async -> SearchHits {
-        // Scope to the active playlist unless cross-playlist search is on, in
-        // which case every playlist is named and each gets its own share of the
-        // budget — one catalog would otherwise fill all `resultLimit` rows and
-        // the others would look unsearched. Every catalog row's id carries its
+        // Every catalog row's id carries its
         // playlist's UUID as a prefix (see `SearchScope.playlistIDPrefix`), so a
-        // prefix test on the indexed `id` limits results to that playlist.
+        // prefix test on the indexed `id` limits results to unlocked playlists.
         // Hidden/restricted categories are excluded in the fetch rather than
         // afterwards, so `resultLimit` isn't spent on rows the viewer will
         // never see.
-        let scoped = searchAllPlaylists ? playlists : [playlist].compactMap(\.self)
         let request = SearchRequest(
             query: query,
-            playlistIDs: scoped.map(\.id.uuidString),
+            playlistIDs: playlists.map(\.id.uuidString),
             wantMovies: wantMovies,
             wantSeries: wantSeries,
             wantLive: wantLive,
@@ -453,21 +437,12 @@ private struct SearchFieldModifier: ViewModifier {
 
 // MARK: - Search Key
 
-/// Identity for the fetch task: re-run when the settled query text, the active
-/// content filter, or the cross-playlist search preference changes.
+/// Identity for the fetch task: re-run when the query, filter, or available
+/// source set changes.
 private struct SearchKey: Equatable {
     let text: String
     let filter: ContentFilter
-    let allPlaylists: Bool
-}
-
-// MARK: - Search Settings
-
-enum SearchSettings {
-    /// When enabled, search spans every configured playlist. Off by default, so
-    /// results stay scoped to the active playlist unless the user opts in.
-    static let searchAllPlaylistsKey = "search.allPlaylists"
-    static let searchAllPlaylistsDefault = false
+    let playlistIDs: [String]
 }
 
 // MARK: - Content Filter

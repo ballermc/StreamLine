@@ -24,9 +24,9 @@ final class M3UPlaylistFlowTests: XCTestCase {
         let app = XCUIApplication()
         launchAndOpenAddForm(app)
         addM3UPlaylist(app)
+        syncAddedPlaylist(app)
         dismissSettingsToTabBar(app)
-        activateM3UPlaylist(app)
-        runManualSync(app)
+        app.tabBars.buttons["Live TV"].tap()
         assertLiveTVShowsContent(app)
     }
 
@@ -96,32 +96,16 @@ final class M3UPlaylistFlowTests: XCTestCase {
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30), "Tab bar not visible")
     }
 
-    /// Switches the active playlist to the one just added.
-    private func activateM3UPlaylist(_ app: XCUIApplication) {
-        // Under `-ui-testing` another playlist (the seeded "Test Playlist", or
-        // one an earlier flow test added) is active, so switch via the library
-        // toolbar's playlist switcher.
-        app.tabBars.buttons["Live TV"].tap()
-        let switcher = app.activePlaylistSwitcher
-        XCTAssertTrue(switcher.waitForExistence(timeout: 20), "Playlist switcher not found")
-        switcher.tap()
-        let item = app.buttons[playlistName].firstMatch
-        XCTAssertTrue(item.waitForExistence(timeout: 10), "Playlist switcher didn't list the playlist")
-        item.tap()
-        // Wait out the blocking switch overlay ("Switching to …").
-        let switchOverlay = app.staticTexts.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Switching to")
-        ).firstMatch
-        if switchOverlay.waitForExistence(timeout: 5) {
-            _ = switchOverlay.waitForNonExistence(timeout: 60)
-        }
-    }
-
-    /// Triggers a manual sync and waits for it to finish.
-    private func runManualSync(_ app: XCUIApplication) {
-        let syncButton = app.syncToolbarButton
-        XCTAssertTrue(syncButton.waitForExistence(timeout: 10), "Sync button not found")
-        syncButton.tap()
+    /// Syncs the new provider from its own details, without changing a global
+    /// active-playlist setting.
+    private func syncAddedPlaylist(_ app: XCUIApplication) {
+        let playlistRow = app.staticTexts[playlistName]
+        XCTAssertTrue(playlistRow.waitForExistence(timeout: 10), "Added playlist is not listed in Settings")
+        playlistRow.tap()
+        XCTAssertTrue(app.navigationBars[playlistName].waitForExistence(timeout: 10), "Playlist details did not open")
+        let syncNow = app.buttons["Sync Now"]
+        XCTAssertTrue(app.scrollUntilExists(syncNow), "Sync Now button not found")
+        syncNow.tap()
         let startSync = app.buttons["Start Sync"]
         XCTAssertTrue(startSync.waitForExistence(timeout: 10), "Sync sheet didn't open")
         startSync.tap()
@@ -130,6 +114,7 @@ final class M3UPlaylistFlowTests: XCTestCase {
         let doneSync = app.buttons["Done"]
         XCTAssertTrue(doneSync.waitForExistence(timeout: 420), "m3u sync did not complete")
         doneSync.tap()
+        app.navigationBars.buttons["Playlists"].tap()
     }
 
     /// Verifies Live TV lists synced content and attaches a screenshot.

@@ -5,15 +5,9 @@
 //  How often playlists are automatically re-synced in the background.
 //
 //  The choice is global — it applies to every playlist — and is persisted via
-//  `@AppStorage(SyncFrequency.storageKey)`. Whether a *specific* playlist takes
-//  part is still gated by its own `syncEnabled` flag. The actual decision of
-//  "is this playlist due for a sync right now" lives in `AutoSync.shouldSync`,
-//  which the launch / playlist-switch / foreground triggers in `MainTabView`
-//  call through.
-//
-//  Being due is necessary but not sufficient: a due playlist that is not the
-//  one on screen waits for the viewer to switch to it. See `AutoSync.shouldSync`
-//  for why.
+//  `@AppStorage(SyncFrequency.storageKey)`. Each unlocked playlist participates
+//  when its own `syncEnabled` flag is on. `AutoSync.shouldSync` decides whether
+//  an individual playlist is due; MainTabView queues all due playlists.
 //
 
 import Foundation
@@ -142,35 +136,17 @@ enum AutoSync {
         let status: SyncStatus
         /// When it last finished a successful sync.
         let lastSyncDate: Date?
-        /// Whether this is the playlist the content tabs are showing.
-        let isActive: Bool
-        /// Whether the viewer added it on this device since launch — see
-        /// `addedThisSession`.
-        let wasAddedThisSession: Bool
+        /// Retained for source compatibility; playlist selection no longer
+        /// controls automatic refresh eligibility.
+        var isActive = true
+        /// Retained for source compatibility; every never-synced unlocked
+        /// playlist is now eligible for refresh.
+        var wasAddedThisSession = false
     }
 
-    /// Playlists the viewer added on this device since launch, recorded by the
-    /// add flow. Session-scoped on purpose: it separates "just added, expected
-    /// to fill in" from the other ways a playlist ends up never-synced — one
-    /// that arrived from iCloud on a new device, or whose first import was
-    /// interrupted — which wait for the viewer like any other stale playlist.
-    static var addedThisSession: Set<UUID> = []
-
-    /// Auto-sync hands the screen to a blocking progress cover, so with several
-    /// playlists configured, launching used to mean sitting through one cover
-    /// per playlist — on a large catalog, minutes each.
-    ///
-    /// Only the active playlist earns that. Every content surface scopes to
-    /// `playlists.active(for:)`, so a stale *other* playlist changes nothing the
-    /// viewer can see; it syncs when they switch to it, which is the moment its
-    /// freshness starts to matter and which `MainTabView` already triggers on.
-    ///
-    /// The exception is a playlist just added from Settings, which syncs
-    /// wherever it is: the add doesn't select it, and the viewer adding one
-    /// expects it to be ready when they go looking for it. The exception is
-    /// keyed on the add rather than on `lastSyncDate == nil`, which would also
-    /// catch every playlist iCloud brings to a new device and put one cover per
-    /// playlist right back.
+    /// Every unlocked playlist contributes to the visible catalog, so each due
+    /// playlist is refreshed. The caller filters out sources locked by the
+    /// current plan and queues the eligible ones sequentially.
     ///
     /// - Parameter alreadyStarted: whether this session has already kicked off a
     ///   sync for it that hasn't finished yet (avoids double-triggering from
@@ -184,21 +160,17 @@ enum AutoSync {
         candidate.syncEnabled
             && candidate.status != .syncing
             && !alreadyStarted
-            && (candidate.isActive || candidate.wasAddedThisSession)
             && frequency.isDue(lastSyncDate: candidate.lastSyncDate, now: now)
     }
 }
 
 extension Playlist {
-    /// This playlist as `AutoSync.shouldSync` sees it, given the id of the
-    /// playlist on screen (`[Playlist].activeID(for:)`).
-    func autoSyncCandidate(activeID: String) -> AutoSync.Candidate {
+    /// This playlist as `AutoSync.shouldSync` sees it.
+    func autoSyncCandidate() -> AutoSync.Candidate {
         AutoSync.Candidate(
             syncEnabled: syncEnabled,
             status: syncStatus,
-            lastSyncDate: lastSyncDate,
-            isActive: id.uuidString == activeID,
-            wasAddedThisSession: AutoSync.addedThisSession.contains(id)
+            lastSyncDate: lastSyncDate
         )
     }
 }

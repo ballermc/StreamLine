@@ -28,7 +28,7 @@ struct PlaylistTabTests {
         #expect(Optional(playlist).showsTab(.search))
     }
 
-    @Test func `no active playlist shows every tab`() {
+    @Test func `missing playlist shows every tab`() {
         let none: Playlist? = nil
         #expect(none.showsTab(.liveTV))
     }

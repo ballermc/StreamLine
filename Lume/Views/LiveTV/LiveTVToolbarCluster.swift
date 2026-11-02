@@ -24,14 +24,12 @@ extension View {
     /// Adds the Recordings button (once a recording server is paired) and the
     /// Multi-View button (when `multiViewAvailable`) as one cluster. Recordings
     /// without Lume Pro carries the crown and opens the paywall;
-    /// `openMultiView` runs Multi-View's own Lume Pro gate. `switcherTitle` is
-    /// the playlist switcher's title when the bar shows one — it competes for
-    /// the same room. tvOS has no toolbar: it reaches both from the Live TV
+    /// `openMultiView` runs Multi-View's own Lume Pro gate. tvOS has no toolbar:
+    /// it reaches both from the Live TV
     /// rail and the Guide.
     @ViewBuilder
     func liveTVToolbarCluster(
         multiViewAvailable: Bool,
-        switcherTitle: String?,
         openMultiView: @escaping () -> Void
     ) -> some View {
         #if os(tvOS)
@@ -39,7 +37,6 @@ extension View {
         #else
             modifier(LiveTVToolbarClusterModifier(
                 multiViewAvailable: multiViewAvailable,
-                switcherTitle: switcherTitle,
                 openMultiView: openMultiView
             ))
         #endif
@@ -50,7 +47,6 @@ extension View {
 
     private struct LiveTVToolbarClusterModifier: ViewModifier {
         let multiViewAvailable: Bool
-        let switcherTitle: String?
         let openMultiView: () -> Void
 
         @State private var store = RecordingServerStore.shared
@@ -97,9 +93,9 @@ extension View {
         }
 
         /// Maps the width to a Bool, so the action runs only when the
-        /// threshold is crossed. Re-identified by the threshold, so a new
-        /// playlist name or tab set re-measures against the new one. The Mac
-        /// and visionOS toolbars have room and measure nothing.
+        /// threshold is crossed. Re-identified by the threshold, so a changed
+        /// tab set re-measures against the new one. The Mac and visionOS
+        /// toolbars have room and measure nothing.
         @ViewBuilder
         private var crampedWidthReader: some View {
             #if os(iOS)
@@ -122,8 +118,7 @@ extension View {
                 let tabBarOnTop = UIDevice.current.userInterfaceIdiom == .pad && horizontalSizeClass == .regular
                 return LiveTVToolbarSpace(
                     tabBarOnTop: tabBarOnTop,
-                    tabTitleWidths: tabBarOnTop ? tabTitles.map { Self.width(of: $0, font: Self.tabFont) } : [],
-                    switcherTitleWidth: switcherTitle.map { Self.width(of: $0, font: Self.switcherFont) }
+                    tabTitleWidths: tabBarOnTop ? tabTitles.map { Self.width(of: $0, font: Self.tabFont) } : []
                 )
             }
 
@@ -143,11 +138,6 @@ extension View {
             }
 
             private static let tabFont = UIFont.systemFont(ofSize: 17)
-
-            /// `PlaylistSwitcher`'s `.headline` title.
-            private static var switcherFont: UIFont {
-                UIFont.preferredFont(forTextStyle: .headline)
-            }
 
             private static func width(of text: String, font: UIFont) -> CGFloat {
                 ceil((text as NSString).size(withAttributes: [.font: font]).width)

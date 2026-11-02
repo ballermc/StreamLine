@@ -20,9 +20,9 @@ final class StalkerPortalFlowTests: XCTestCase {
         let app = XCUIApplication()
         launchAndOpenAddForm(app)
         addStalkerPortal(app)
+        syncAddedPortal(app)
         dismissSettingsToTabBar(app)
-        activatePortalPlaylist(app)
-        runManualSync(app)
+        app.tabBars.buttons["Live TV"].tap()
         assertLiveTVShowsContent(app)
     }
 
@@ -87,41 +87,26 @@ final class StalkerPortalFlowTests: XCTestCase {
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30), "Tab bar not visible")
     }
 
-    /// Switches the active playlist to the portal just added.
-    private func activatePortalPlaylist(_ app: XCUIApplication) {
-        // Under `-ui-testing` another playlist (the seeded "Test Playlist", or
-        // one an earlier flow test added) is active, so switch via the library
-        // toolbar's playlist switcher.
-        app.tabBars.buttons["Live TV"].tap()
-        let switcher = app.activePlaylistSwitcher
-        XCTAssertTrue(switcher.waitForExistence(timeout: 15), "Playlist switcher not found")
-        switcher.tap()
-        let portalItem = app.buttons["Example Portal"].firstMatch
-        XCTAssertTrue(portalItem.waitForExistence(timeout: 5), "Playlist switcher didn't list the portal")
-        portalItem.tap()
-        // Wait out the blocking switch overlay ("Switching to …").
-        let switchOverlay = app.staticTexts.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Switching to")
-        ).firstMatch
-        if switchOverlay.waitForExistence(timeout: 5) {
-            _ = switchOverlay.waitForNonExistence(timeout: 60)
+    /// Syncs the new provider from its own details, without changing a global
+    /// active-playlist setting.
+    private func syncAddedPortal(_ app: XCUIApplication) {
+        if !app.navigationBars["Playlists"].exists {
+            XCTAssertTrue(app.openSettingsPlaylists(), "Settings › Playlists did not open")
         }
-    }
-
-    /// Triggers a manual sync of the active portal and waits for it to finish.
-    private func runManualSync(_ app: XCUIApplication) {
-        // Auto-sync is disabled under `-ui-testing`, so trigger a sync of the now-
-        // active portal manually through the toolbar sync button → Start Sync, and
-        // wait for it to finish (the sheet shows a "Done" button on success).
-        let syncButton = app.syncToolbarButton
-        XCTAssertTrue(syncButton.waitForExistence(timeout: 10), "Sync button not found")
-        syncButton.tap()
+        let playlistRow = app.staticTexts["Example Portal"]
+        XCTAssertTrue(playlistRow.waitForExistence(timeout: 10), "Added portal is not listed in Settings")
+        playlistRow.tap()
+        XCTAssertTrue(app.navigationBars["Example Portal"].waitForExistence(timeout: 10), "Portal details did not open")
+        let syncNow = app.buttons["Sync Now"]
+        XCTAssertTrue(app.scrollUntilExists(syncNow), "Sync Now button not found")
+        syncNow.tap()
         let startSync = app.buttons["Start Sync"]
         XCTAssertTrue(startSync.waitForExistence(timeout: 10), "Sync sheet didn't open")
         startSync.tap()
         let doneSync = app.buttons["Done"]
         XCTAssertTrue(doneSync.waitForExistence(timeout: 180), "Stalker sync did not complete")
         doneSync.tap()
+        app.navigationBars.buttons["Playlists"].tap()
     }
 
     /// Verifies Live TV lists synced content and attaches a screenshot.

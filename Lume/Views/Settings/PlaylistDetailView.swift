@@ -10,9 +10,6 @@ struct PlaylistDetailView: View {
     /// frequency in Settings re-renders the Status row (it decides `.overdue`).
     @AppStorage(SyncFrequency.storageKey)
     private var syncFrequencyRaw: String = SyncFrequency.defaultValue.rawValue
-    /// Whether this is the selected playlist decides between "Sync due" and
-    /// "Syncs when selected" — auto-sync only refreshes the one on screen.
-    @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
     @Query private var playlists: [Playlist]
 
     /// This playlist's sync condition, shared by the Status row and the
@@ -25,7 +22,6 @@ struct PlaylistDetailView: View {
             syncEnabled: playlist.syncEnabled,
             status: playlist.syncStatus,
             lastSyncDate: playlist.lastSyncDate,
-            isActive: playlist.id.uuidString == playlists.activeID(for: selectedPlaylistID),
             frequency: SyncFrequency.resolve(syncFrequencyRaw)
         )
     }

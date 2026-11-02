@@ -9,7 +9,7 @@ struct RefreshAllProgressView: View {
     @State private var phase: Phase = .ready
     @State private var playlistResults: [UUID: PlaylistResult] = [:]
     @State private var progress = SyncProgress()
-    @State private var activePlaylistName: String?
+    @State private var currentPlaylistName: String?
     @State private var guideState: GuideState = .pending
     @State private var refreshTask: Task<Void, Never>?
 
@@ -46,9 +46,9 @@ struct RefreshAllProgressView: View {
                             playlistRow(playlist)
                         }
 
-                        if let activePlaylistName {
+                        if let currentPlaylistName {
                             activeProgress
-                                .accessibilityLabel("Refreshing \(activePlaylistName)")
+                                .accessibilityLabel("Refreshing \(currentPlaylistName)")
                         }
 
                         Divider()
@@ -106,7 +106,7 @@ struct RefreshAllProgressView: View {
 
     private var activeProgress: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(activePlaylistName ?? "")
+            Text(currentPlaylistName ?? "")
                 .font(.subheadline.weight(.semibold))
             if let currentStep = progress.currentStep {
                 HStack {
@@ -248,7 +248,7 @@ struct RefreshAllProgressView: View {
                 continue
             }
 
-            activePlaylistName = playlist.name
+            currentPlaylistName = playlist.name
             playlistResults[playlist.id] = .syncing
             let tracker = SyncProgress(steps: SyncStep.steps(for: playlist.sourceType))
             progress = tracker
@@ -277,7 +277,7 @@ struct RefreshAllProgressView: View {
             return
         }
 
-        activePlaylistName = nil
+        currentPlaylistName = nil
         guideState = .syncing
         guideRefreshAttempted = true
         guideState = await epgSync.syncNowAndWait() ? .complete : .unavailable

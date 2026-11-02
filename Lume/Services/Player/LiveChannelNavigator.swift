@@ -164,22 +164,29 @@ nonisolated enum LiveChannelNavigator {
         currentDescriptor.fetchLimit = 1
         guard let current = try? context.fetch(currentDescriptor).first,
               let playlist = playlist(for: current, in: context) else { return nil }
+        let prefix = media.channelScopePrefix ?? "\(playlist.id.uuidString)-"
 
         guard let located = ring(
             around: current,
             media: media,
             sort: sort,
             restriction: restriction,
-            playlist: playlist,
+            playlistPrefix: prefix,
             in: context
         ) else { return nil }
 
         let ring = located.ring
         guard ring.count > 1 else { return nil }
         let position = (located.index + offset + ring.count) % ring.count
-        guard let target = ring.row(at: position, in: context) else { return nil }
+        guard let target = ring.row(at: position, in: context),
+              let targetPlaylist = playlist(for: target, in: context) else { return nil }
         // The scope rides along so the next press surfs the same list.
-        return PlayableMedia.from(stream: target, playlist: playlist, scope: media.channelScope)
+        return PlayableMedia.from(
+            stream: target,
+            playlist: targetPlaylist,
+            scope: media.channelScope,
+            channelScopePrefix: media.channelScopePrefix
+        )
     }
 
     // MARK: - The ring
@@ -353,10 +360,9 @@ nonisolated enum LiveChannelNavigator {
         media: PlayableMedia,
         sort: ContentSortOption,
         restriction: ContentRestriction,
-        playlist: Playlist,
+        playlistPrefix prefix: String,
         in context: ModelContext
     ) -> (ring: Ring, index: Int)? {
-        let prefix = "\(playlist.id.uuidString)-"
         let ownCategory = current.categoryId.map(LiveChannelScope.category)
         // A category launch scope *is* the channel's own category, and the branch
         // below resolves that list anyway — asking for it here first would walk
@@ -422,10 +428,10 @@ nonisolated enum LiveChannelNavigator {
 
     /// Recently Watched composed the way the browse list composes it: SQLite caps
     /// the newest `LiveChannelQuery.recentLimit` rows across *every* playlist, and
-    /// only afterwards does `LiveChannelQuery.scoped` drop the rows belonging to
-    /// another playlist or to a category this viewer can't see. A ring whose
-    /// predicate carries the prefix and the restriction caps after filtering
-    /// instead, which is this playlist's newest 50 — a different set of channels
+    /// only afterwards does `LiveChannelQuery.scoped` drop the rows outside the
+    /// supplied playlist scope or in a category this viewer can't see. A ring
+    /// whose predicate carries the prefix and restriction caps after filtering
+    /// instead, which is the scope's newest 50 — a different set of channels
     /// from the rail it claims to walk whenever a second playlist is installed.
     ///
     /// So this list is materialized, which the `Ring`'s positional reads exist to

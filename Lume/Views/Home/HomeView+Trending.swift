@@ -131,7 +131,7 @@ extension HomeView {
     // MARK: - Watchlist
 
     /// Loads every service's watchlist row, concurrently, keeping only the
-    /// titles the user actually owns in the active playlist — matched by TMDB
+    /// titles the user actually owns in an unlocked playlist — matched by TMDB
     /// id, the same way the trending rows work.
     func loadWatchlists(scope: String) async {
         async let trakt: Void = loadWatchlist(.trakt, scope: scope)
@@ -195,7 +195,7 @@ extension HomeView {
         }
     }
 
-    /// The first 20 watchlist titles the active playlist carries, in watchlist
+    /// The first 20 watchlist titles any unlocked playlist carries, in watchlist
     /// order.
     private func matchWatchlist(_ titles: [WatchlistTitle]) -> [HomeMediaItem] {
         var movieIDs: [Int] = []
@@ -229,7 +229,7 @@ extension HomeView {
         let descriptor = FetchDescriptor<Movie>(predicate: movieTmdbIdPredicate(ids: ids))
         var byId: [Int: Movie] = [:]
         for movie in (try? modelContext.fetch(descriptor)) ?? []
-            where belongsToActivePlaylist(movie.id) && !restriction.hides(categoryID: movie.categoryId)
+            where belongsToUnlockedPlaylist(movie.id) && !restriction.hides(categoryID: movie.categoryId)
         {
             guard let tmdbId = movie.tmdbId, byId[tmdbId] == nil else { continue }
             byId[tmdbId] = movie
@@ -243,7 +243,7 @@ extension HomeView {
         let descriptor = FetchDescriptor<Series>(predicate: seriesTmdbIdPredicate(ids: ids))
         var byId: [Int: Series] = [:]
         for series in (try? modelContext.fetch(descriptor)) ?? []
-            where belongsToActivePlaylist(series.id) && !restriction.hides(categoryID: series.categoryId)
+            where belongsToUnlockedPlaylist(series.id) && !restriction.hides(categoryID: series.categoryId)
         {
             guard let tmdbId = series.tmdbId, byId[tmdbId] == nil else { continue }
             byId[tmdbId] = series

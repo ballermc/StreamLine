@@ -8,11 +8,12 @@
 //  category — so they're driven by their own predicates rather than a
 //  `categoryId`, mirroring the Home screen's rows.
 //
-//  Each surface scopes its @Query to the active playlist inside the predicate:
-//  ids are playlist-prefixed, so `id.starts(with:)` is a prefix match SQLite
-//  answers itself. Scoping in memory instead meant every row hydrated every
-//  playlist's matches and then threw most of them away, on every catalog write
-//  — 0.85 ms for a fresh library, 59 ms once 3,035 movies carried a watch date.
+//  Each surface scopes its @Query to the unlocked source set inside the
+//  predicate: ids are playlist-prefixed, so `id.starts(with:)` is a prefix
+//  match SQLite answers itself. Scoping in memory instead meant every row
+//  hydrated every playlist's matches and then threw most of them away, on every
+//  catalog write — 0.85 ms for a fresh library, 59 ms once 3,035 movies carried
+//  a watch date.
 //  Only the viewer's hidden categories are filtered in Swift, since that state
 //  lives in the environment rather than the store. Rows render nothing when
 //  empty so a fresh library degrades gracefully.
@@ -140,7 +141,7 @@ private struct CollectionPreviewRow<Item: Identifiable & Hashable & WatchlistFav
 // MARK: - Movies
 
 /// A Movies-tab collection preview row (Recently Watched or Favorites). Renders
-/// nothing when the active playlist has no matching movies.
+/// nothing when no unlocked source has matching movies.
 struct MovieCollectionRow: View {
     let kind: LibraryCollection.Kind
     var animationNamespace: Namespace.ID?
@@ -267,7 +268,7 @@ enum MovieCollectionQuery {
 // MARK: - Series
 
 /// A Series-tab collection preview row (Recently Watched or Favorites). Renders
-/// nothing when the active playlist has no matching series.
+/// nothing when no unlocked source has matching series.
 struct SeriesCollectionRow: View {
     let kind: LibraryCollection.Kind
     var animationNamespace: Namespace.ID?

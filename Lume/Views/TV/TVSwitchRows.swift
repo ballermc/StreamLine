@@ -2,54 +2,12 @@
 //  TVSwitchRows.swift
 //  Lume
 //
-//  The playlist and profile rows shared by every tvOS switch surface (the
-//  Settings Playlists/Profiles panes and the quick-switch overlay). They draw the
-//  row itself only — the Settings panes compose their pencil affordance alongside
-//  one, so a surface that must not offer editing simply leaves it out. Their
-//  checkmark and active state also mark the Sync pane's backend rows.
+//  The profile row shared by the tvOS Settings pane and quick-switch overlay.
 //
 
 #if os(tvOS)
 
     import SwiftUI
-
-    /// A full-width playlist row: name over server URL, with a checkmark on the
-    /// active one. Full width matters for focus — a narrow target won't catch
-    /// "down" from a full-width section above it.
-    struct TVPlaylistSwitchRow: View {
-        let playlist: Playlist
-        let isActive: Bool
-        /// Locked by the free plan: the crown replaces the sync accessory, which
-        /// would only report a sync that can't run. The caller opens the paywall.
-        var isLocked = false
-        let action: () -> Void
-
-        var body: some View {
-            Button(action: action) {
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(playlist.name)
-                        Text(playlist.displayURL)
-                            .font(.system(size: TVSettingsMetrics.secondaryFontSize))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    Spacer(minLength: 0)
-                    if isLocked {
-                        PremiumBadge()
-                    } else {
-                        PlaylistSyncAccessory(state: playlist.syncState(isActive: isActive), size: 26)
-                    }
-                    if isActive {
-                        TVSwitchRowCheckmark()
-                    }
-                }
-            }
-            .buttonStyle(TVSettingsRowButtonStyle())
-            .modifier(TVSwitchRowActiveState(isActive: isActive))
-        }
-    }
 
     /// A full-width profile row: avatar and name, with a checkmark on the active
     /// one.

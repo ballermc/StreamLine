@@ -67,6 +67,7 @@ struct SeriesCategoryView: View {
     private var grid: some View {
         let base = CategoryContentGrid(
             title: category.name,
+            sourceName: category.playlist?.name,
             items: series,
             animationNamespace: animationNamespace,
             emptyTitle: "No Series",

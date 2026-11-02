@@ -8,11 +8,7 @@
 //  iOS / macOS: `PlaylistsSettingsView`, pushed from the root row.
 //
 //  tvOS: the Playlists pane — the management surface: add, edit, delete, and
-//  switch the active playlist. A switch made here presents the blocking sync
-//  cover; the fast path that skips it is the Play/Pause quick-switch overlay
-//  (TVQuickSwitchOverlay), which switches only. tvOS has no toolbar to host a
-//  PlaylistSwitcher (the immersive home has none); iOS/macOS use that switcher in
-//  the library toolbar instead.
+//  refresh playlists. All unlocked sources are active simultaneously.
 //
 
 import SwiftData
@@ -35,7 +31,6 @@ private extension [Playlist] {
         @Environment(\.modelContext) private var modelContext
         @Environment(CloudSyncCoordinator.self) private var cloudSync: CloudSyncCoordinator?
         @Query private var playlists: [Playlist]
-        @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
         @AppStorage(SyncFrequency.storageKey) private var syncFrequencyRaw: String = SyncFrequency.defaultValue.rawValue
         @State private var premium = PremiumManager.shared
         @State private var showingAddPlaylist = false
@@ -85,9 +80,7 @@ private extension [Playlist] {
                             if playlists.isLocked(playlist) {
                                 PremiumBadge()
                             } else {
-                                PlaylistSyncAccessory(state: playlist.syncState(
-                                    isActive: playlist.id.uuidString == playlists.activeID(for: selectedPlaylistID)
-                                ))
+                                PlaylistSyncAccessory(state: playlist.syncState())
                             }
                         }
                         .padding(.vertical, 1)
@@ -203,62 +196,39 @@ private extension [Playlist] {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, TVSettingsMetrics.rowHPadding)
                         .padding(.top, 6)
-                } else if playlists.count > 1 {
-                    Text("Switching playlist changes the content shown across Home, Movies, Series and Live TV.")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, TVSettingsMetrics.rowHPadding)
-                        .padding(.top, 6)
                 }
             }
         }
 
-        /// A playlist row mirroring the Profiles pane: tapping the row makes the
-        /// playlist active (checkmark marks the current one); the pencil drills
-        /// into its settings. The active id resolves through the same empty /
-        /// deleted fallback the content tabs use, so the first playlist reads as
-        /// active by default.
+        /// A full-width settings row for source details. Tapping edits this
+        /// provider; it does not change which catalogs are visible.
         private func tvPlaylistRow(_ playlist: Playlist) -> some View {
-            HStack(spacing: 16) {
-                TVPlaylistSwitchRow(
-                    playlist: playlist,
-                    isActive: playlist.id.uuidString == effectivePlaylistID,
-                    isLocked: playlists.isLocked(playlist)
-                ) {
-                    if playlists.isLocked(playlist) {
-                        presentPaywall(.multiplePlaylists)
-                    } else {
-                        switchPlaylist(to: playlist)
+            Button {
+                selectedPlaylist = playlist
+            } label: {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(playlist.name)
+                        Text(playlist.displayURL)
+                            .font(.system(size: TVSettingsMetrics.secondaryFontSize))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     }
-                }
-
-                Button {
-                    selectedPlaylist = playlist
-                } label: {
+                    Spacer(minLength: 0)
+                    if playlists.isLocked(playlist) {
+                        PremiumBadge()
+                    } else {
+                        PlaylistSyncAccessory(state: playlist.syncState(), size: 26)
+                    }
                     Image(systemName: "pencil")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(TVContentIconButtonStyle())
-                .focused($drillInFocus, equals: .playlist(playlist.id))
-                .accessibilityLabel("Edit \(playlist.name)")
             }
-        }
-
-        /// The active playlist's id, accounting for the empty-default / deleted
-        /// fallback to the first playlist.
-        private var effectivePlaylistID: String {
-            playlists.activeID(for: selectedPlaylistID)
-        }
-
-        /// Switches the global selection, routing through the blocking overlay when
-        /// the switch model is available (same path as the iOS toolbar switcher).
-        private func switchPlaylist(to playlist: Playlist) {
-            let id = playlist.id.uuidString
-            guard id != effectivePlaylistID else { return }
-            if let playlistSwitch {
-                playlistSwitch.switchTo(name: playlist.name) { selectedPlaylistID = id }
-            } else {
-                selectedPlaylistID = id
-            }
+            .buttonStyle(TVSettingsRowButtonStyle())
+            .focused($drillInFocus, equals: .playlist(playlist.id))
+            .accessibilityLabel("Edit \(playlist.name)")
         }
     }
 

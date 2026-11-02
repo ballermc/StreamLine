@@ -66,7 +66,7 @@ struct ChannelsList: View {
         try? modelContext.save()
     }
 
-    /// Empties the whole Recently Watched list for the active playlist. The
+    /// Empties the whole Recently Watched list for the unlocked source scope. The
     /// section drops away on its own once the last timestamp clears (its parent
     /// gates it on `hasRecents`).
     private func clearRecentlyWatched() {

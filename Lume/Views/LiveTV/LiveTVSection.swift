@@ -97,9 +97,9 @@ struct LiveTVCategoryGroup: Identifiable {
 nonisolated enum LiveChannelScope: Hashable, Codable {
     /// Channels in a single synced category (carries the category id).
     case category(String)
-    /// Every favorited channel in the active playlist.
+    /// Every favorited channel in the unlocked source scope.
     case favorites
-    /// Recently watched channels in the active playlist, newest first.
+    /// Recently watched channels in the unlocked source scope, newest first.
     case recentlyWatched
 }
 
@@ -120,9 +120,9 @@ nonisolated enum LiveChannelQuery {
     /// the user's content-sort choice; the virtual collections have an intrinsic
     /// order (favorites by their own custom order, recents by most-recent-first).
     ///
-    /// Recently Watched caps *before* `scoped(_:…)` drops the other playlists'
-    /// rows, so the rail shows the part of the global newest `recentLimit` that
-    /// belongs to the active playlist. In-player surfing reproduces that order of
+    /// Recently Watched caps *before* `scoped(_:…)` applies the plan's source
+    /// scope, so the rail shows the globally newest `recentLimit` channels
+    /// available to the viewer. In-player surfing reproduces that order of
     /// operations (`LiveChannelNavigator.recentsRing`) — move the prefix into
     /// this predicate and the two compositions diverge.
     static func descriptor(for scope: LiveChannelScope, sort: ContentSortOption) -> FetchDescriptor<LiveStream> {
@@ -173,7 +173,7 @@ nonisolated enum LiveChannelQuery {
         }
     }
 
-    /// Whether the active playlist holds any favorite this viewer may see — the
+    /// Whether any unlocked source holds a favorite this viewer may see — the
     /// only thing the rail needs in order to decide whether to offer the
     /// Favorites section.
     ///
@@ -234,7 +234,7 @@ nonisolated enum LiveChannelQuery {
         Set(restriction.excludedCategoryIDs.map(String?.some))
     }
 
-    /// Scopes a query's results to the active playlist *and* to what the current
+    /// Scopes a query's results to unlocked playlists *and* to what the current
     /// viewer is allowed to see. Category queries are already isolated (category
     /// ids are playlist-prefixed), but the virtual collections span every
     /// playlist, so they're filtered in-memory by the shared id prefix — the same
@@ -276,8 +276,8 @@ nonisolated enum LiveChannelQuery {
         streams.contains { isVisible($0, playlistPrefix: playlistPrefix, restriction: restriction) }
     }
 
-    /// The per-channel test the virtual collections apply: in the active
-    /// playlist, and not in a category locked away from this viewer.
+    /// The per-channel test the virtual collections apply: in the supplied
+    /// playlist scope, and not in a category locked away from this viewer.
     private static func isVisible(
         _ stream: LiveStream,
         playlistPrefix: String,
@@ -286,7 +286,7 @@ nonisolated enum LiveChannelQuery {
         stream.id.hasPrefix(playlistPrefix) && !restriction.hides(categoryID: stream.categoryId)
     }
 
-    /// The live categories of the active playlist this viewer may see: scoped by
+    /// The live categories of every unlocked playlist this viewer may see: scoped by
     /// playlist prefix, minus the ones hidden in Content Management, minus the
     /// ones locked away from a child profile.
     ///
@@ -402,14 +402,14 @@ final class LiveTVCategoryMemo {
 
 // MARK: - Rail sections
 
-/// Resolves the Live TV rail — the two virtual collections, when the active
+/// Resolves the Live TV rail — the two virtual collections, when any unlocked
 /// playlist has anything visible in them and Settings › Live TV hasn't switched
 /// them off, above the synced categories — and hands the result to `content`.
 ///
 /// The gates live here, in a child view, because a `@Query`'s descriptor is
 /// fixed at `init` and `LiveTVView` is a tab root whose `init` does not re-run
-/// when the selected playlist changes; this view is rebuilt by that body, so its
-/// probes always describe the playlist currently on screen. Resolving them as
+/// when the available source scope changes; this view is rebuilt by that body,
+/// so its probes always describe the sources currently on screen. Resolving them as
 /// `@Query`s (rather than a fetch in a task) is what keeps the rail reacting to
 /// a channel being favorited or watched without a second render pass.
 struct LiveTVSections<Content: View>: View {
@@ -444,10 +444,6 @@ struct LiveTVSections<Content: View>: View {
     /// The rail's entries: the virtual collections (when non-empty) pinned above
     /// the synced categories.
     private var sections: [LiveTVSection] {
-        // An empty prefix means there is no active playlist at all, and
-        // `starts(with: "")` matches every row — the guard the two `has…`
-        // properties used to carry before the probes moved into SQL.
-        guard !playlistPrefix.isEmpty else { return categorySections }
         var resolved: [LiveTVSection] = []
         if showsFavorites, !favoriteProbe.isEmpty { resolved.append(.favorites) }
         if showsRecentlyWatched, !recentProbe.isEmpty { resolved.append(.recentlyWatched) }

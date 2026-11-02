@@ -18,7 +18,7 @@ struct GenreDerivationTests {
         Series(id: "\(prefix)series-\(seriesId)", seriesId: seriesId, name: "Series \(seriesId)", genre: genre)
     }
 
-    @Test func `derives distinct movie genres for the active playlist, most-common first`() async throws {
+    @Test func `derives distinct movie genres within a source, most-common first`() async throws {
         let container = try makeTestContainer()
         let context = container.mainContext
         context.insert(makeMovie(streamId: 1, genre: "Action, Drama", prefix: prefix))
@@ -35,7 +35,7 @@ struct GenreDerivationTests {
         #expect(genres == ["Action", "Comedy", "Drama"])
     }
 
-    @Test func `derives distinct series genres for the active playlist`() async throws {
+    @Test func `derives distinct series genres within a source`() async throws {
         let container = try makeTestContainer()
         let context = container.mainContext
         context.insert(makeSeries(seriesId: 1, genre: "Sci-Fi & Fantasy, Drama", prefix: prefix))

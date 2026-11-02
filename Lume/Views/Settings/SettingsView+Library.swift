@@ -2,9 +2,9 @@
 //  SettingsView+Library.swift
 //  Lume
 //
-//  Library settings, scoped to the active playlist: which content tabs it
-//  shows (plus the app-wide Sports tab), Categories & Channels (Content
-//  Management, PIN-gated), and whether Search spans every playlist.
+//  Library settings aggregate tab visibility across unlocked playlists (plus
+//  the app-wide Sports tab) and manage Categories & Channels across those
+//  sources (Content Management, PIN-gated).
 //
 //  iOS / macOS: `LibrarySettingsView`, pushed from the root row. tvOS: the
 //  Library pane, whose Categories & Channels row drills in place.
@@ -48,24 +48,47 @@ extension PlaylistTab {
     }
 }
 
+private extension [Playlist] {
+    func tabVisibility(
+        _ tab: PlaylistTab,
+        context: ModelContext,
+        cloudSync: CloudSyncCoordinator?
+    ) -> Binding<Bool> {
+        let sources = unlocked()
+        return Binding(
+            get: { sources.contains { !$0.hiddenTabs.contains(tab) } },
+            set: { shows in
+                for source in sources {
+                    var hidden = source.hiddenTabs
+                    if shows {
+                        hidden.remove(tab)
+                    } else {
+                        hidden.insert(tab)
+                    }
+                    source.hiddenTabs = hidden
+                }
+                try? context.save()
+                Task { @MainActor in cloudSync?.reconcile() }
+            }
+        )
+    }
+}
+
 #if !os(tvOS)
 
     struct LibrarySettingsView: View {
         @Environment(\.modelContext) private var modelContext
         @Environment(CloudSyncCoordinator.self) private var cloudSync: CloudSyncCoordinator?
         @Query private var playlists: [Playlist]
-        @AppStorage(PlaylistSelectionStore.key) private var selectedPlaylistID: String = ""
         @AppStorage(SportsSyncService.tabEnabledKey) private var sportsTabEnabled = SportsSyncService.tabEnabledDefault
-        @AppStorage(SearchSettings.searchAllPlaylistsKey)
-        private var searchAllPlaylists = SearchSettings.searchAllPlaylistsDefault
 
         var body: some View {
-            let activePlaylist = playlists.active(for: selectedPlaylistID)
+            let unlockedPlaylists = playlists.unlocked()
             List {
                 Section {
-                    if let activePlaylist {
+                    if !unlockedPlaylists.isEmpty {
                         ForEach(PlaylistTab.allCases) { tab in
-                            Toggle(tab.title, isOn: activePlaylist.tabVisibility(
+                            Toggle(tab.title, isOn: playlists.tabVisibility(
                                 tab, context: modelContext, cloudSync: cloudSync
                             ))
                         }
@@ -74,8 +97,8 @@ extension PlaylistTab {
                 } header: {
                     Text("Tabs")
                 } footer: {
-                    if let activePlaylist {
-                        Text("Movies, Series and Live TV apply to \(activePlaylist.name), your active playlist. Sports applies to every playlist.")
+                    if !unlockedPlaylists.isEmpty {
+                        Text("Movies, Series and Live TV are shown when enabled for an unlocked playlist. Sports applies to every playlist.")
                     }
                 }
 
@@ -85,19 +108,11 @@ extension PlaylistTab {
                     } label: {
                         Text("Categories & Channels")
                     }
-                    .disabled(activePlaylist == nil)
+                    .disabled(unlockedPlaylists.isEmpty)
                 } header: {
                     Text("Content")
                 } footer: {
-                    Text("Hide and reorder categories and channels for the active playlist.")
-                }
-
-                Section {
-                    Toggle("Search All Playlists", isOn: $searchAllPlaylists)
-                } header: {
-                    Text("Search")
-                } footer: {
-                    Text("When off, search only finds content in the active playlist. Turn this on to search across all your playlists.")
+                    Text("Hide and reorder categories and channels across your unlocked playlists.")
                 }
             }
             .platformNavigationTitle("Library")
@@ -110,20 +125,20 @@ extension PlaylistTab {
 
     extension SettingsView {
         var tvLibraryDetail: some View {
-            let activePlaylist = playlists.active(for: selectedPlaylistID)
+            let unlockedPlaylists = playlists.unlocked()
             return VStack(alignment: .leading, spacing: 36) {
                 VStack(alignment: .leading, spacing: 8) {
                     TVSettingsSectionLabel("Tabs")
-                    if let activePlaylist {
+                    if !unlockedPlaylists.isEmpty {
                         ForEach(PlaylistTab.allCases) { tab in
-                            TVOptionToggleRow(title: tab.title, isOn: activePlaylist.tabVisibility(
+                            TVOptionToggleRow(title: tab.title, isOn: playlists.tabVisibility(
                                 tab, context: modelContext, cloudSync: cloudSync
                             ))
                         }
                     }
                     TVOptionToggleRow(title: "Sports", isOn: $sportsTabEnabled)
-                    if let activePlaylist {
-                        Text("Movies, Series and Live TV apply to \(activePlaylist.name), your active playlist. Sports applies to every playlist.")
+                    if !unlockedPlaylists.isEmpty {
+                        Text("Movies, Series and Live TV are shown when enabled for an unlocked playlist. Sports applies to every playlist.")
                             .font(.system(size: 20))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, TVSettingsMetrics.rowHPadding)
@@ -147,23 +162,14 @@ extension PlaylistTab {
                     }
                     .buttonStyle(TVSettingsRowButtonStyle())
                     .focused($drillInFocus, equals: .contentManagement)
-                    .disabled(activePlaylist == nil)
-                    Text("Hide and reorder categories and channels for the active playlist.")
+                    .disabled(unlockedPlaylists.isEmpty)
+                    Text("Hide and reorder categories and channels across your unlocked playlists.")
                         .font(.system(size: 20))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, TVSettingsMetrics.rowHPadding)
                         .padding(.top, 6)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    TVSettingsSectionLabel("Search")
-                    TVOptionToggleRow(title: "Search All Playlists", isOn: $searchAllPlaylists)
-                    Text("When off, search only finds content in the active playlist. Turn this on to search across all your playlists.")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, TVSettingsMetrics.rowHPadding)
-                        .padding(.top, 6)
-                }
             }
         }
     }

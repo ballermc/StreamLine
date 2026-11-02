@@ -2,7 +2,7 @@
 //  LiveTVEmptyState.swift
 //  Lume
 //
-//  The Live TV browse empty state, phrased for the active playlist's source.
+//  The Live TV browse empty state, phrased for a single source when possible.
 //
 
 import SwiftUI

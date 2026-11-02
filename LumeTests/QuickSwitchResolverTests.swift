@@ -2,12 +2,7 @@
 //  QuickSwitchResolverTests.swift
 //  LumeTests
 //
-//  Covers the shared quick-switch seam every switch surface reads its "which
-//  row is current" answer from: the stored-selection fallbacks of
-//  `[Playlist].active(for:)`, row ordering, the `isCurrent` tag, and the free
-//  plan's one-playlist limit (`unlocked` / `isLocked`). Also
-//  `owner(ofContentID:)`, which answers the other question — not which
-//  playlist is current, but which one a given row came from.
+//  Covers playlist source scoping and profile quick-switch resolution.
 //
 
 import Foundation
@@ -15,9 +10,8 @@ import Foundation
 import SwiftData
 import Testing
 
-/// Serialized: the stored-selection tests read and write
-/// `PlaylistSelectionStore.key` / `ActiveProfileStore.current` in
-/// `UserDefaults.standard`, shared process-wide state.
+/// Serialized because profile-store tests read and write
+/// `ActiveProfileStore.current` in `UserDefaults.standard`.
 @MainActor
 @Suite(.serialized)
 struct QuickSwitchResolverTests {
@@ -59,93 +53,12 @@ struct QuickSwitchResolverTests {
         #expect(playlists.owner(ofContentID: "\(UUID().uuidString)-live-4021") == nil)
     }
 
-    @Test func `the owner is independent of which playlist is active`() throws {
+    @Test func `the owner resolves provider-specific playback credentials`() throws {
         let container = try makeProfileTestContainer()
         let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
         let id = "\(playlists[1].id.uuidString)-movie-77"
 
-        // The active playlist is First; the row is still Second's to play.
-        #expect(playlists.active(for: playlists[0].id.uuidString)?.id == playlists[0].id)
         #expect(playlists.owner(ofContentID: id)?.id == playlists[1].id)
-    }
-
-    // MARK: - active(for:)
-
-    @Test func `an empty stored selection resolves to the oldest playlist`() throws {
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
-
-        #expect(playlists.active(for: "")?.id == playlists[0].id)
-    }
-
-    @Test func `a stored selection naming a deleted playlist falls back to the oldest`() throws {
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
-
-        #expect(playlists.active(for: UUID().uuidString)?.id == playlists[0].id)
-    }
-
-    @Test func `the fallback is the oldest playlist whatever order the fetch returned`() throws {
-        // Every caller resolves against its own unsorted `@Query` or fetch; they
-        // must still agree on the fallback.
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second", "Third"], in: container.mainContext)
-
-        #expect(Array(playlists.reversed()).active(for: "")?.id == playlists[0].id)
-        #expect([playlists[1], playlists[0], playlists[2]].activeID(for: UUID().uuidString) == playlists[0].id.uuidString)
-    }
-
-    @Test func `a valid stored selection resolves to that playlist`() throws {
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second", "Third"], in: container.mainContext)
-
-        #expect(playlists.active(for: playlists[2].id.uuidString, isPremium: true)?.id == playlists[2].id)
-    }
-
-    @Test func `no playlists resolves to nothing`() {
-        #expect([Playlist]().active(for: UUID().uuidString) == nil)
-    }
-
-    // MARK: - Playlist rows
-
-    @Test func `playlist rows keep the given order and mark the stored selection current`() throws {
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second", "Third"], in: container.mainContext)
-
-        let rows = QuickSwitchResolver.playlistRows(playlists, storedID: playlists[1].id.uuidString, isPremium: true)
-
-        #expect(rows.map(\.item.name) == ["First", "Second", "Third"])
-        #expect(rows.filter(\.isCurrent).map(\.item.name) == ["Second"])
-        #expect(rows.allSatisfy { !$0.isLocked })
-    }
-
-    @Test func `playlist rows mark the first row current when the stored selection is stale`() throws {
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
-
-        let rows = QuickSwitchResolver.playlistRows(playlists, storedID: UUID().uuidString)
-
-        #expect(rows.filter(\.isCurrent).map(\.item.name) == ["First"])
-        #expect(playlists.activeID(for: "") == playlists[0].id.uuidString)
-    }
-
-    @Test func `the current playlist follows the value in the selection store`() throws {
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
-
-        let savedSelection = UserDefaults.standard.string(forKey: PlaylistSelectionStore.key)
-        defer {
-            if let savedSelection {
-                UserDefaults.standard.set(savedSelection, forKey: PlaylistSelectionStore.key)
-            } else {
-                UserDefaults.standard.removeObject(forKey: PlaylistSelectionStore.key)
-            }
-        }
-
-        UserDefaults.standard.set(playlists[1].id.uuidString, forKey: PlaylistSelectionStore.key)
-        let stored = UserDefaults.standard.string(forKey: PlaylistSelectionStore.key) ?? ""
-
-        #expect(playlists.active(for: stored, isPremium: true)?.id == playlists[1].id)
     }
 
     // MARK: - Free plan
@@ -159,19 +72,6 @@ struct QuickSwitchResolverTests {
         #expect(shuffled.filter { shuffled.isLocked($0, isPremium: false) }.map(\.name) == ["Third", "Second"])
         #expect(shuffled.unlocked(isPremium: true).map(\.id) == shuffled.map(\.id))
         #expect(!shuffled.contains { shuffled.isLocked($0, isPremium: true) })
-    }
-
-    @Test func `without Pro a stored selection naming a locked playlist resolves to the oldest`() throws {
-        // Typically a playlist Lume Cloud brought over from Lume for Android, or
-        // the one picked before a subscription ran out.
-        let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
-        let stored = playlists[1].id.uuidString
-
-        #expect(playlists.active(for: stored, isPremium: false)?.id == playlists[0].id)
-        #expect(playlists.activeID(for: stored, isPremium: false) == playlists[0].id.uuidString)
-        // Pro brings the stored pick straight back — nothing overwrote it.
-        #expect(playlists.active(for: stored, isPremium: true)?.id == playlists[1].id)
     }
 
     @Test func `without Pro content is locked by the playlist prefix on its id`() throws {
@@ -189,26 +89,24 @@ struct QuickSwitchResolverTests {
         let playlists = try makePlaylists(["Only"], in: container.mainContext)
 
         #expect(!playlists.isLocked(playlists[0], isPremium: false))
-        #expect(playlists.active(for: "", isPremium: false)?.id == playlists[0].id)
         #expect([Playlist]().unlocked(isPremium: false).isEmpty)
     }
 
-    @Test func `without Pro playlist rows mark every playlist but the oldest locked`() throws {
+    @Test func `the free plan scopes catalog queries to the oldest playlist`() throws {
         let container = try makeProfileTestContainer()
         let playlists = try makePlaylists(["First", "Second", "Third"], in: container.mainContext)
 
-        let rows = QuickSwitchResolver.playlistRows(playlists, storedID: playlists[2].id.uuidString, isPremium: false)
-
-        #expect(rows.map(\.item.name) == ["First", "Second", "Third"])
-        #expect(rows.filter(\.isCurrent).map(\.item.name) == ["First"])
-        #expect(rows.filter(\.isLocked).map(\.item.name) == ["Second", "Third"])
+        #expect(playlists.contentScopePrefix(isPremium: false) == "\(playlists[0].id.uuidString)-")
+        #expect(playlists.contentScopePrefix(isPremium: true).isEmpty)
     }
 
-    @Test func `profile rows are never locked`() throws {
+    @Test func `all playlist sources are unlocked for Pro in their existing order`() throws {
         let container = try makeProfileTestContainer()
-        let profiles = try makeProfiles(["Me", "Kids"], in: container.mainContext)
+        let playlists = try makePlaylists(["First", "Second", "Third"], in: container.mainContext)
+        let shuffled = [playlists[2], playlists[0], playlists[1]]
 
-        #expect(QuickSwitchResolver.profileRows(profiles, activeProfileID: profiles[0].id).allSatisfy { !$0.isLocked })
+        #expect(shuffled.unlocked(isPremium: true).map(\.id) == shuffled.map(\.id))
+        #expect(!shuffled.contains { shuffled.isLocked($0, isPremium: true) })
     }
 
     // MARK: - Profile rows
@@ -251,13 +149,10 @@ struct QuickSwitchResolverTests {
 
     @Test func `row ids are the item ids the focus targets key on`() throws {
         let container = try makeProfileTestContainer()
-        let playlists = try makePlaylists(["First", "Second"], in: container.mainContext)
         let profiles = try makeProfiles(["Me", "Kids"], in: container.mainContext)
 
-        let playlistRows = QuickSwitchResolver.playlistRows(playlists, storedID: "")
         let profileRows = QuickSwitchResolver.profileRows(profiles, activeProfileID: profiles[0].id)
 
-        #expect(playlistRows.map(\.id) == playlists.map(\.id))
         #expect(profileRows.map(\.id) == profiles.map(\.id))
     }
 }

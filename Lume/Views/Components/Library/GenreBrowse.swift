@@ -14,7 +14,7 @@ import SwiftUI
 
 // MARK: - Genre derivation
 
-/// Upper bound on the fetch that enumerates a playlist's genres. The genre
+/// Upper bound on the fetch that enumerates unlocked sources' genres. The genre
 /// vocabulary is tiny (a couple dozen names) and saturates almost immediately,
 /// so a bounded sample surfaces every genre in practice while keeping the
 /// derivation cheap on libraries with tens of thousands of titles — the same
@@ -48,7 +48,7 @@ enum GenreDerivation {
         }.value
     }
 
-    /// Scopes the sampled rows to the active playlist and viewer (the
+    /// Scopes the sampled rows to unlocked sources and the viewer (the
     /// `excludingRestricted` filter, inlined so this stays `nonisolated`), then
     /// derives the distinct genres. Runs on the caller's background context.
     private nonisolated static func derive(
@@ -85,7 +85,7 @@ nonisolated extension Series: GenreCarrying {}
 
 // MARK: - Browse-by-genre section
 
-/// A tile grid of the genres present in the active playlist, most-common first.
+/// A tile grid of the genres present in unlocked sources, most-common first.
 /// Each tile navigates to that genre's full grid.
 ///
 /// The owning view derives the genres and renders this only when the list is
@@ -132,8 +132,8 @@ private let genreScanBudget = 500
 /// off-main fetch takes a single `Sendable` value, mirroring `SearchRequest`.
 nonisolated struct GenrePageRequest {
     let genre: String
-    /// `"<playlistUUID>-"` — the id prefix every title in the active playlist
-    /// shares, matched in SQLite rather than after materialization.
+    /// Empty for all unlocked sources, otherwise the free plan's playlist
+    /// prefix, matched in SQLite rather than after materialization.
     let playlistPrefix: String
     let excludedCategoryIDs: Set<String>
     /// Where in the source rows to resume; see `GenrePage.scanned`.

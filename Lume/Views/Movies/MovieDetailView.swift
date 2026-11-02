@@ -278,10 +278,11 @@ struct MovieDetailView: View {
         #endif
     }
 
-    /// The playlist this movie actually belongs to (ids are `"<playlistUUID>-…"`),
-    /// so playback uses the correct credentials. Falls back to the first.
+    /// The owning unlocked playlist supplies this movie's playback credentials.
     private var moviePlaylist: Playlist? {
-        playlists.first { movie.id.hasPrefix($0.id.uuidString) } ?? playlists.first
+        guard let playlist = playlists.owner(ofContentID: movie.id),
+              !playlists.isLocked(playlist) else { return nil }
+        return playlist
     }
 
     // MARK: - Enrichment

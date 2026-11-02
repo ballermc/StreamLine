@@ -33,13 +33,11 @@ enum WidgetSnapshotExporter {
     private static let favoritesLimit = TopShelfConfiguration.maxItemsPerSection
     private static let onNowLimit = TopShelfConfiguration.maxItemsPerSection
 
-    /// Exports a fresh snapshot for the active playlist/profile and tells the
-    /// system to re-read it: widget timelines on iOS, the Top Shelf on tvOS.
+    /// Exports a fresh snapshot across unlocked playlists for the active profile
+    /// and tells the system to re-read it: widget timelines on iOS, Top Shelf on tvOS.
     nonisolated static func export(container: ModelContainer, isChildProfile: Bool, now: Date = Date()) {
-        let storedID = UserDefaults.standard.string(forKey: PlaylistSelectionStore.key) ?? ""
         var snapshot = makeSnapshot(
             container: container,
-            storedPlaylistID: storedID,
             isChildProfile: isChildProfile,
             now: now
         )
@@ -59,26 +57,26 @@ enum WidgetSnapshotExporter {
         #endif
     }
 
-    /// Builds the snapshot for the active playlist. Hidden categories and
+    /// Builds the snapshot across every unlocked playlist. Hidden categories and
     /// channels never enter it, and restricted categories stay out while a
     /// child profile is active — a widget must not leak content the app hides.
     /// Internal (not private) so tests can build snapshots without touching the
     /// App Group container.
     nonisolated static func makeSnapshot(
         container: ModelContainer,
-        storedPlaylistID: String,
         isChildProfile: Bool,
+        isPremium: Bool? = nil,
         now: Date = Date()
     ) -> WidgetSnapshot {
         let context = ModelContext(container)
         let playlists = (try? context.fetch(FetchDescriptor<Playlist>())) ?? []
-        guard let playlist = playlists.active(for: storedPlaylistID) else {
+        guard !playlists.isEmpty else {
             var empty = WidgetSnapshot.empty
             empty.generatedAt = now
             return empty
         }
 
-        let playlistPrefix = "\(playlist.id.uuidString)-"
+        let playlistPrefixes = playlists.unlocked(isPremium: isPremium).map { "\($0.id.uuidString)-" }
         let restriction = ContentRestriction(
             isActive: isChildProfile,
             restrictedCategoryIDs: isChildProfile ? categoryIDs(in: context, matching: #Predicate { $0.isRestricted }) : [],
@@ -87,9 +85,9 @@ enum WidgetSnapshotExporter {
 
         return WidgetSnapshot(
             generatedAt: now,
-            continueWatching: continueWatching(in: context, prefix: playlistPrefix, restriction: restriction),
-            favorites: favorites(in: context, prefix: playlistPrefix, restriction: restriction),
-            onNow: onNow(in: context, container: container, prefix: playlistPrefix, restriction: restriction, now: now)
+            continueWatching: continueWatching(in: context, prefixes: playlistPrefixes, restriction: restriction),
+            favorites: favorites(in: context, prefixes: playlistPrefixes, restriction: restriction),
+            onNow: onNow(in: context, container: container, prefixes: playlistPrefixes, restriction: restriction, now: now)
         )
     }
 
@@ -108,11 +106,11 @@ enum WidgetSnapshotExporter {
     /// in-progress episode when it has one (see `HomeMediaItem.progress`).
     private nonisolated static func continueWatching(
         in context: ModelContext,
-        prefix: String,
+        prefixes: [String],
         restriction: ContentRestriction
     ) -> [WidgetMediaItem] {
-        let entries = resumableMovies(in: context, prefix: prefix, restriction: restriction)
-            + recentlyWatchedSeries(in: context, prefix: prefix, restriction: restriction)
+        let entries = resumableMovies(in: context, prefixes: prefixes, restriction: restriction)
+            + recentlyWatchedSeries(in: context, prefixes: prefixes, restriction: restriction)
         return entries
             .sorted { $0.lastWatched > $1.lastWatched }
             .prefix(continueWatchingLimit)
@@ -121,7 +119,7 @@ enum WidgetSnapshotExporter {
 
     private nonisolated static func resumableMovies(
         in context: ModelContext,
-        prefix: String,
+        prefixes: [String],
         restriction: ContentRestriction
     ) -> [(lastWatched: Date, item: WidgetMediaItem)] {
         var entries: [(lastWatched: Date, item: WidgetMediaItem)] = []
@@ -132,7 +130,9 @@ enum WidgetSnapshotExporter {
         )
         movieDescriptor.fetchLimit = 30
         let movies = (try? context.fetch(movieDescriptor)) ?? []
-        for movie in movies where movie.id.hasPrefix(prefix) && !restriction.hides(categoryID: movie.categoryId) {
+        for movie in movies where belongsToPlaylistScope(movie.id, prefixes: prefixes)
+            && !restriction.hides(categoryID: movie.categoryId)
+        {
             guard let lastWatched = movie.lastWatchedDate,
                   let deepLink = WidgetDeepLink.play(kind: .movie, id: movie.id) else { continue }
             var progress: Double?
@@ -160,7 +160,7 @@ enum WidgetSnapshotExporter {
     /// episodes keep their progress.
     private nonisolated static func recentlyWatchedSeries(
         in context: ModelContext,
-        prefix: String,
+        prefixes: [String],
         restriction: ContentRestriction
     ) -> [(lastWatched: Date, item: WidgetMediaItem)] {
         var descriptor = FetchDescriptor<Series>(
@@ -169,7 +169,7 @@ enum WidgetSnapshotExporter {
         )
         descriptor.fetchLimit = 30
         let shows = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.id.hasPrefix(prefix) && !restriction.hides(categoryID: $0.categoryId) }
+            .filter { belongsToPlaylistScope($0.id, prefixes: prefixes) && !restriction.hides(categoryID: $0.categoryId) }
         guard !shows.isEmpty else { return [] }
 
         let inProgress = inProgressEpisodes(in: context)
@@ -239,13 +239,15 @@ enum WidgetSnapshotExporter {
     /// `favoriteOrder` (nil orders last, then alphabetical — same as Home).
     private nonisolated static func favorites(
         in context: ModelContext,
-        prefix: String,
+        prefixes: [String],
         restriction: ContentRestriction
     ) -> [WidgetMediaItem] {
         var entries: [(order: Int, item: WidgetMediaItem)] = []
 
         let movies = (try? context.fetch(FetchDescriptor<Movie>(predicate: #Predicate { $0.isFavorite }))) ?? []
-        for movie in movies where movie.id.hasPrefix(prefix) && !restriction.hides(categoryID: movie.categoryId) {
+        for movie in movies where belongsToPlaylistScope(movie.id, prefixes: prefixes)
+            && !restriction.hides(categoryID: movie.categoryId)
+        {
             guard let deepLink = WidgetDeepLink.play(kind: .movie, id: movie.id) else { continue }
             entries.append((movie.favoriteOrder ?? Int.max, WidgetMediaItem(
                 id: "movie-\(movie.id)",
@@ -261,7 +263,9 @@ enum WidgetSnapshotExporter {
         }
 
         let series = (try? context.fetch(FetchDescriptor<Series>(predicate: #Predicate { $0.isFavorite }))) ?? []
-        for show in series where show.id.hasPrefix(prefix) && !restriction.hides(categoryID: show.categoryId) {
+        for show in series where belongsToPlaylistScope(show.id, prefixes: prefixes)
+            && !restriction.hides(categoryID: show.categoryId)
+        {
             guard let deepLink = WidgetDeepLink.openSeries(id: show.id) else { continue }
             entries.append((show.favoriteOrder ?? Int.max, WidgetMediaItem(
                 id: "series-\(show.id)",
@@ -279,7 +283,9 @@ enum WidgetSnapshotExporter {
         let streams = (try? context.fetch(
             FetchDescriptor<LiveStream>(predicate: #Predicate { $0.isFavorite && $0.isHidden == false })
         )) ?? []
-        for stream in streams where stream.id.hasPrefix(prefix) && !restriction.hides(categoryID: stream.categoryId) {
+        for stream in streams where belongsToPlaylistScope(stream.id, prefixes: prefixes)
+            && !restriction.hides(categoryID: stream.categoryId)
+        {
             guard let deepLink = WidgetDeepLink.play(kind: .live, id: stream.id) else { continue }
             entries.append((stream.favoriteOrder ?? Int.max, WidgetMediaItem(
                 id: "live-\(stream.id)",
@@ -306,7 +312,7 @@ enum WidgetSnapshotExporter {
     private nonisolated static func onNow(
         in context: ModelContext,
         container: ModelContainer,
-        prefix: String,
+        prefixes: [String],
         restriction: ContentRestriction,
         now: Date
     ) -> [WidgetChannelNow] {
@@ -315,7 +321,7 @@ enum WidgetSnapshotExporter {
             sortBy: [SortDescriptor(\.favoriteOrder), SortDescriptor(\.name)]
         )
         let streams = ((try? context.fetch(descriptor)) ?? [])
-            .filter { $0.id.hasPrefix(prefix) && !restriction.hides(categoryID: $0.categoryId) }
+            .filter { belongsToPlaylistScope($0.id, prefixes: prefixes) && !restriction.hides(categoryID: $0.categoryId) }
             .prefix(onNowLimit)
 
         let channelIds = streams.compactMap(\.epgChannelId)
@@ -336,5 +342,9 @@ enum WidgetSnapshotExporter {
                 deepLink: deepLink
             )
         }
+    }
+
+    private nonisolated static func belongsToPlaylistScope(_ id: String, prefixes: [String]) -> Bool {
+        prefixes.contains { id.hasPrefix($0) }
     }
 }
