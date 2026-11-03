@@ -5,17 +5,19 @@ struct SportsChannelSourceLabel: View {
     let channel: ResolvedChannel
 
     var body: some View {
-        if let text {
-            Text(verbatim: text)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.quaternary, in: Capsule())
-                .accessibilityLabel(Text(verbatim: accessibilityText))
+        Group {
+            if let text {
+                Text(verbatim: text)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.quaternary, in: Capsule())
+                    .accessibilityLabel(Text(verbatim: accessibilityText))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .clipped()

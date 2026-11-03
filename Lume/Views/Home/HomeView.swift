@@ -419,7 +419,7 @@ struct HomeView: View {
             let playlistID = UUID(uuidString: String(stream.id.prefix(36)))
             let playlist = playlistID.flatMap { playlistNames[$0] }
             let category = stream.categoryId.flatMap { categoryNames[$0] }
-            let parts = [playlist, category].compactMap { value in
+            let parts: [String] = [playlist, category].compactMap { value in
                 guard let value, !value.isEmpty else { return nil }
                 return value
             }
