@@ -17,6 +17,7 @@ import SwiftUI
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
 struct PlayerLoadingIndicator: View {
     let title: String?
+    let onClose: () -> Void
 
     var body: some View {
         ZStack {
@@ -41,9 +42,22 @@ struct PlayerLoadingIndicator: View {
                         .padding(.horizontal, 40)
                         .shadow(radius: 8)
                 }
+
+                #if !os(tvOS)
+                    Button(action: onClose) {
+                        Label("Back", systemImage: "xmark")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 12)
+                            .contentShape(Capsule())
+                            .glassEffectCompat(.regularInteractive, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                #endif
             }
         }
-        .allowsHitTesting(false)
     }
 
     #if os(tvOS)

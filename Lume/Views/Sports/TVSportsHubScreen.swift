@@ -349,7 +349,7 @@
         }
 
         private var resolveKey: String {
-            visibleFixtures.map(\.id).joined(separator: ",") + "|" + String(epg.isSyncing)
+            visibleFixtures.map(\.id).joined(separator: ",") + "|" + String(epg.syncGeneration)
         }
 
         private func runResolve() async {

@@ -27,6 +27,7 @@ struct SyncProgressView: View {
     /// slice. Only meaningful for Stalker portals (the "Download full catalog"
     /// action); other source types always sync fully and ignore it.
     let full: Bool
+    let refreshEPG: Bool
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -36,10 +37,11 @@ struct SyncProgressView: View {
     @State private var syncError: String?
     @State private var syncTask: Task<Void, Never>?
 
-    init(playlist: Playlist, autoStart: Bool = false, full: Bool = false) {
+    init(playlist: Playlist, autoStart: Bool = false, full: Bool = false, refreshEPG: Bool = false) {
         self.playlist = playlist
         self.autoStart = autoStart
         self.full = full
+        self.refreshEPG = refreshEPG
         _progress = State(initialValue: SyncProgress(steps: SyncStep.steps(for: playlist.sourceType, full: full)))
         // Start already in the syncing state for auto-sync so the "Ready" screen
         // (with its Start button) never flashes before `.task` kicks off.
@@ -112,6 +114,9 @@ struct SyncProgressView: View {
                     try await syncManager.syncPlaylist(playlist, progress: progress, full: full)
                 }
                 succeeded = true
+                if refreshEPG {
+                    _ = await EPGSyncService.shared.syncNowAndWait()
+                }
                 await MainActor.run {
                     // Newly synced titles need indexing; the launch-time pass
                     // may already be finished, so kick a fresh one — but hold it

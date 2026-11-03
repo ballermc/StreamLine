@@ -83,6 +83,10 @@ final class EPGSyncService {
 
     private(set) var isSyncing = false
     private(set) var lastSyncSucceeded = false
+    /// Increments only after a successful guide rebuild. Consumers that need
+    /// to re-resolve guide-backed data can observe this without restarting
+    /// work when a refresh merely starts or finishes unsuccessfully.
+    private(set) var syncGeneration = 0
 
     private var container: ModelContainer?
     private var task: Task<Void, Never>?
@@ -199,6 +203,7 @@ final class EPGSyncService {
             if succeeded {
                 EPGSyncSchedule.lastSyncDate = Date()
                 EPGSyncSchedule.schemaVersion = SyncFrequency.epgCurrentSchemaVersion
+                syncGeneration += 1
             }
             lastSyncSucceeded = succeeded
             isSyncing = false

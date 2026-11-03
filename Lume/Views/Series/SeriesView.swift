@@ -22,6 +22,7 @@ struct SeriesView: View {
 
     @State private var premium = PremiumManager.shared
     @State private var showingSync = false
+    @State private var showingRefreshAll = false
     @State private var showingSettings = false
     @State private var genres: [String] = []
 
@@ -100,8 +101,9 @@ struct SeriesView: View {
                 categorySortRaw: $categorySortRaw,
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
+                showingRefreshAll: $showingRefreshAll,
                 showingSettings: $showingSettings,
-                syncPlaylist: syncPlaylist
+                refreshablePlaylists: refreshablePlaylists
             ))
             .navigationDestination(for: Category.self) { category in
                 SeriesCategoryView(category: category, animationNamespace: animationNamespace)
@@ -133,6 +135,11 @@ struct SeriesView: View {
     private var syncPlaylist: Playlist? {
         playlists.unlocked(isPremium: premium.isPremium)
             .min { ($0.addedAt, $0.id.uuidString) < ($1.addedAt, $1.id.uuidString) }
+    }
+
+    private var refreshablePlaylists: [Playlist] {
+        playlists.unlocked(isPremium: premium.isPremium)
+            .sorted { ($0.addedAt, $0.id.uuidString) < ($1.addedAt, $1.id.uuidString) }
     }
 
     /// Empty means all source catalogs; on the free plan this scopes to its one

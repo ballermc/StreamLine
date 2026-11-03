@@ -4,8 +4,9 @@ struct LibraryToolbarModifier: ViewModifier {
     @Binding var categorySortRaw: String
     @Binding var contentSortRaw: String
     @Binding var showingSync: Bool
+    @Binding var showingRefreshAll: Bool
     @Binding var showingSettings: Bool
-    let syncPlaylist: Playlist?
+    let refreshablePlaylists: [Playlist]
 
     @Environment(DeepLinkRouter.self) private var router: DeepLinkRouter?
 
@@ -25,11 +26,21 @@ struct LibraryToolbarModifier: ViewModifier {
                 // menu rows (and VoiceOver) real names rather than the symbols'
                 // defaults.
                 ToolbarItem(placement: .automatic) {
-                    Button {
-                        showingSync = true
+                    Menu {
+                        Button {
+                            showingSync = true
+                        } label: {
+                            Label("Refresh Playlist…", systemImage: "arrow.clockwise")
+                        }
+                        Button {
+                            showingRefreshAll = true
+                        } label: {
+                            Label("Refresh All Playlists…", systemImage: "arrow.clockwise.circle")
+                        }
                     } label: {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Refresh", systemImage: "arrow.clockwise")
                     }
+                    .disabled(refreshablePlaylists.isEmpty)
                 }
 
                 ToolbarItem(placement: .automatic) {
@@ -52,9 +63,10 @@ struct LibraryToolbarModifier: ViewModifier {
                 }
             )
             .sheet(isPresented: $showingSync) {
-                if let playlist = syncPlaylist {
-                    SyncProgressView(playlist: playlist)
-                }
+                PlaylistRefreshView(playlists: refreshablePlaylists)
+            }
+            .sheet(isPresented: $showingRefreshAll) {
+                RefreshAllProgressView(playlists: refreshablePlaylists)
             }
             // A pairing link's add-device sheet is presented from the browse
             // root, which can't present over these.
@@ -70,8 +82,9 @@ struct LibraryToolbarConfiguration {
     @Binding var categorySortRaw: String
     @Binding var contentSortRaw: String
     @Binding var showingSync: Bool
+    @Binding var showingRefreshAll: Bool
     @Binding var showingSettings: Bool
-    let syncPlaylist: Playlist?
+    let refreshablePlaylists: [Playlist]
 }
 
 extension View {
@@ -84,8 +97,9 @@ extension View {
                 categorySortRaw: config.$categorySortRaw,
                 contentSortRaw: config.$contentSortRaw,
                 showingSync: config.$showingSync,
+                showingRefreshAll: config.$showingRefreshAll,
                 showingSettings: config.$showingSettings,
-                syncPlaylist: config.syncPlaylist
+                refreshablePlaylists: config.refreshablePlaylists
             ))
         #endif
     }

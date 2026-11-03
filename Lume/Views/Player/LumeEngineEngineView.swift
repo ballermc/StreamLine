@@ -175,7 +175,10 @@ struct LumeEngineEngineView: View {
             #endif
 
             if coordinator.isBuffering, !loadFailed {
-                PlayerLoadingIndicator(title: coordinator.hasStartedPlayback ? nil : media.title)
+                PlayerLoadingIndicator(
+                    title: coordinator.hasStartedPlayback ? nil : media.title,
+                    onClose: closePlayer
+                )
                     .transition(.opacity)
             }
 

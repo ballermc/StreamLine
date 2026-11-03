@@ -195,7 +195,7 @@ import SwiftUI
 
         private var resolveKey: String {
             guard premium.isPremium else { return "idle" }
-            return railFixtures.map(\.id).joined(separator: ",") + "|" + String(epg.isSyncing)
+            return railFixtures.map(\.id).joined(separator: ",") + "|" + String(epg.syncGeneration)
         }
 
         private func runResolve() async {

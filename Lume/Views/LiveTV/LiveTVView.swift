@@ -186,21 +186,10 @@ struct LiveTVView: View {
                 categorySortRaw: $categorySortRaw,
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
+                showingRefreshAll: $showingRefreshAll,
                 showingSettings: $showingSettings,
-                syncPlaylist: syncPlaylist
+                refreshablePlaylists: refreshablePlaylists
             ))
-            #if !os(tvOS)
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        showingRefreshAll = true
-                    } label: {
-                        Label("Refresh All", systemImage: "arrow.clockwise")
-                    }
-                    .disabled(refreshablePlaylists.isEmpty)
-                }
-            }
-            #endif
             // After `libraryToolbar`, so Recordings and Multi-View lead the bar
             // as their own cluster, never beside Settings. Guide or List is
             // chosen in Settings › Live TV on every platform.
@@ -228,15 +217,6 @@ struct LiveTVView: View {
             #if os(tvOS)
             .fullScreenCover(isPresented: $showingRefreshAll) {
                 RefreshAllProgressView(playlists: refreshablePlaylists)
-            }
-            #elseif os(iOS)
-            .fullScreenCover(isPresented: $showingRefreshAll) {
-                RefreshAllProgressView(playlists: refreshablePlaylists)
-            }
-            #else
-            .sheet(isPresented: $showingRefreshAll) {
-                RefreshAllProgressView(playlists: refreshablePlaylists)
-                    .frame(minWidth: 480, minHeight: 560)
             }
             #endif
         }
@@ -359,11 +339,6 @@ struct LiveTVView: View {
             }
         }
     #endif
-
-    /// The oldest unlocked source remains the target of single-playlist controls.
-    private var syncPlaylist: Playlist? {
-        playlists.unlocked(isPremium: premium.isPremium).oldest
-    }
 
     private var emptyStateSourceType: PlaylistSourceType? {
         let sources = playlists.unlocked(isPremium: premium.isPremium)

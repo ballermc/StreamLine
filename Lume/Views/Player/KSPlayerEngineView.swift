@@ -299,7 +299,7 @@ struct KSPlayerEngineView: View {
                 }
 
                 if isBuffering {
-                    PlayerLoadingIndicator(title: hasStartedPlayback ? nil : media.title)
+                    PlayerLoadingIndicator(title: hasStartedPlayback ? nil : media.title, onClose: closePlayer)
                         .transition(.opacity)
                 }
 
@@ -486,7 +486,7 @@ struct KSPlayerEngineView: View {
                 episodeOverlays(controlsVisible: isControlsVisible) { coordinator.seek(time: $0) }
 
                 if isBuffering {
-                    PlayerLoadingIndicator(title: hasStartedPlayback ? nil : media.title)
+                    PlayerLoadingIndicator(title: hasStartedPlayback ? nil : media.title, onClose: closePlayer)
                         .transition(.opacity)
                 }
 

@@ -220,7 +220,7 @@ struct SportsHubView: View {
     /// off-main pass, re-running when the fixture set changes or an EPG refresh
     /// finishes (fresh sub-titles sharpen matching).
     private func resolveKey(_ fixtures: [SportsFixture]) -> String {
-        fixtures.map(\.id).joined(separator: ",") + "|" + String(epg.isSyncing)
+        fixtures.map(\.id).joined(separator: ",") + "|" + String(epg.syncGeneration)
     }
 
     private func runResolve(_ fixtures: [SportsFixture]) async {

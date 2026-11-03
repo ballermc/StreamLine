@@ -76,6 +76,7 @@ struct HomeView: View {
     @State var sportsStore = SportsStore.shared
     @State private var playingMedia: PlayableMedia?
     @State private var showingSync = false
+    @State private var showingRefreshAll = false
     @State private var showingSettings = false
     /// Shown when a channel's "Start Multi-View" is picked without Lume Pro.
     @State private var showingPaywall = false
@@ -197,8 +198,9 @@ struct HomeView: View {
                 categorySortRaw: $categorySortRaw,
                 contentSortRaw: $contentSortRaw,
                 showingSync: $showingSync,
+                showingRefreshAll: $showingRefreshAll,
                 showingSettings: $showingSettings,
-                syncPlaylist: syncPlaylist
+                refreshablePlaylists: refreshablePlaylists
             ))
             .navigationDestination(for: Movie.self) { movie in
                 MovieDetailView(movie: movie, animationNamespace: animationNamespace)
@@ -359,6 +361,11 @@ struct HomeView: View {
     /// single-playlist Sync action. All unlocked sources are browsable.
     private var syncPlaylist: Playlist? {
         playlists.unlocked(isPremium: premium.isPremium).oldest
+    }
+
+    private var refreshablePlaylists: [Playlist] {
+        playlists.unlocked(isPremium: premium.isPremium)
+            .sorted { ($0.addedAt, $0.id.uuidString) < ($1.addedAt, $1.id.uuidString) }
     }
 
     /// Empty means all unlocked playlists; on the free plan it scopes to the

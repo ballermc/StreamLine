@@ -48,6 +48,15 @@ struct ContentManagementView: View {
     /// it, which is what makes "hide all, search, show all matches" work.
     @State private var listedCategories: [Category] = []
 
+    private struct CategoryGroup: Identifiable {
+        let playlist: Playlist
+        let categories: [Category]
+
+        var id: UUID {
+            playlist.id
+        }
+    }
+
     #if !os(tvOS)
         /// Drives the drill-in to channel management. Owned here (not by a List
         /// row's NavigationLink) so the push survives the List reloading its rows.
@@ -100,6 +109,19 @@ struct ContentManagementView: View {
                     FavoriteManagementView()
                 }
         #endif
+    }
+
+    private var categoryGroups: [CategoryGroup] {
+        let unlockedIDs = Set(playlists.unlocked().map(\.id))
+        return playlists
+            .filter { unlockedIDs.contains($0.id) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .compactMap { playlist in
+                let playlistCategories = listedCategories.filter { $0.playlist?.id == playlist.id }
+                return playlistCategories.isEmpty
+                    ? nil
+                    : CategoryGroup(playlist: playlist, categories: playlistCategories)
+            }
     }
 
     // MARK: - Scoping
@@ -164,8 +186,8 @@ struct ContentManagementView: View {
 
     // MARK: - Mutations
 
-    private func move(from source: IndexSet, to destination: Int) {
-        ContentOrganizer.reorder(categories, from: source, to: destination)
+    private func move(from source: IndexSet, to destination: Int, in group: [Category]? = nil) {
+        ContentOrganizer.reorder(group ?? categories, from: source, to: destination)
         // The stamp rewrites `customOrder` without changing how many categories
         // exist, so `scopeKey` doesn't move. Refresh by hand or the list snaps
         // straight back to the pre-move order.
@@ -179,15 +201,6 @@ struct ContentManagementView: View {
         ContentOrganizer.commitOrder(arranged)
         refreshCategories()
     }
-
-    #if !os(tvOS)
-        /// A filtered list's offsets don't map onto the full group, so reordering
-        /// is only offered when nothing is filtered out.
-        private var moveHandler: ((IndexSet, Int) -> Void)? {
-            guard searchText.isEmpty else { return nil }
-            return move
-        }
-    #endif
 
     /// Reset deliberately spans the whole type rather than the listed subset:
     /// `customOrder` is stamped densely across a group, so clearing part of one
@@ -284,18 +297,22 @@ struct ContentManagementView: View {
                     .padding(.horizontal, TVSettingsMetrics.rowHPadding)
                     .padding(.vertical, 8)
             } else {
-                TVReorderableContentList(
-                    items: categories,
-                    title: { $0.name },
-                    isHidden: { $0.isHidden },
-                    drillValue: categoryDrill,
-                    onToggleHidden: { $0.isHidden.toggle() },
-                    onCommitOrder: commitReorder,
-                    isReordering: $isReordering,
-                    scrollProxy: proxy,
-                    isRestricted: { $0.isRestricted },
-                    onToggleRestricted: { $0.isRestricted.toggle() }
-                )
+                ForEach(categoryGroups) { group in
+                    TVSettingsSectionLabel(group.playlist.name)
+                        .padding(.top, 12)
+                    TVReorderableContentList(
+                        items: group.categories,
+                        title: { $0.name },
+                        isHidden: { $0.isHidden },
+                        drillValue: categoryDrill,
+                        onToggleHidden: { $0.isHidden.toggle() },
+                        onCommitOrder: commitReorder,
+                        isReordering: $isReordering,
+                        scrollProxy: proxy,
+                        isRestricted: { $0.isRestricted },
+                        onToggleRestricted: { $0.isRestricted.toggle() }
+                    )
+                }
             }
         }
     #else
@@ -344,31 +361,50 @@ struct ContentManagementView: View {
                     }
                 }
 
-                Section {
-                    if categories.isEmpty {
+                if categories.isEmpty {
+                    Section {
                         Text("Nothing to manage yet. Sync this playlist first.")
                             .foregroundStyle(.secondary)
-                    } else if listedCategories.isEmpty {
+                    } header: {
+                        Text("Categories")
+                    } footer: {
+                        Text(footerText)
+                    }
+                } else if listedCategories.isEmpty {
+                    Section {
                         Text("No categories match your search.")
                             .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(listedCategories) { category in
-                            ContentManageRow(
-                                title: category.name,
-                                isHidden: category.isHidden,
-                                isRestricted: category.isRestricted,
-                                drillInValue: selectedType == .live ? category : nil,
-                                onToggleHidden: { category.isHidden.toggle() },
-                                onToggleRestricted: { category.isRestricted.toggle() },
-                                onDrillIn: { selectedCategory = $0 }
-                            )
-                        }
-                        .onMove(perform: moveHandler)
+                    } header: {
+                        Text("Categories")
+                    } footer: {
+                        Text(footerText)
                     }
-                } header: {
-                    Text("Categories")
-                } footer: {
-                    Text(footerText)
+                } else {
+                    ForEach(categoryGroups) { group in
+                        Section {
+                            ForEach(group.categories) { category in
+                                ContentManageRow(
+                                    title: category.name,
+                                    isHidden: category.isHidden,
+                                    isRestricted: category.isRestricted,
+                                    drillInValue: selectedType == .live ? category : nil,
+                                    onToggleHidden: { category.isHidden.toggle() },
+                                    onToggleRestricted: { category.isRestricted.toggle() },
+                                    onDrillIn: { selectedCategory = $0 }
+                                )
+                            }
+                            .onMove { offsets, destination in
+                                guard searchText.isEmpty else { return }
+                                move(
+                                    from: offsets,
+                                    to: destination,
+                                    in: group.categories
+                                )
+                            }
+                        } header: {
+                            Text(group.playlist.name)
+                        }
+                    }
                 }
             }
             #if os(macOS)

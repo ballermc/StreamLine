@@ -100,6 +100,7 @@ struct SportsChannelRow: View {
         HStack(spacing: 12) {
             ChannelLogo(urlString: channel.stream.streamIcon, size: 36)
             SportsChannelLabel(channel: channel, isLastWatched: isLastWatched)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 8)
             Image(systemName: "play.circle.fill")
                 .font(.title2)
@@ -137,6 +138,7 @@ struct SportsChannelLabel: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
     }
 
     private var nameLine: some View {

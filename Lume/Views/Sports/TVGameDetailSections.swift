@@ -36,6 +36,7 @@
                         subtitle
                         SportsChannelSourceLabel(channel: channel)
                     }
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 16)
                     Image(systemName: "play.circle.fill").font(.system(size: 40))
                 }
