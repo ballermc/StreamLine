@@ -12,7 +12,7 @@ struct PlaylistRefreshView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Playlist") {
+                Section {
                     Picker("Account", selection: $selectedPlaylistID) {
                         Text("Choose a playlist").tag(nil as UUID?)
                         ForEach(playlists) { playlist in
@@ -20,6 +20,8 @@ struct PlaylistRefreshView: View {
                         }
                     }
                     Toggle("Refresh EPG", isOn: $refreshEPG)
+                } header: {
+                    Text("Playlist")
                 } footer: {
                     Text("Refreshing the EPG updates guide data for all enabled sources.")
                 }

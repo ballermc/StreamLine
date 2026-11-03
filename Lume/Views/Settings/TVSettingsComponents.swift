@@ -60,16 +60,20 @@
 
     /// A small uppercase grouped-section header.
     struct TVSettingsSectionLabel: View {
-        private let title: LocalizedStringKey
+        private let title: Text
 
         init(_ title: LocalizedStringKey) {
-            self.title = title
+            self.title = Text(title)
+        }
+
+        init(_ title: String) {
+            self.title = Text(verbatim: title)
         }
 
         var body: some View {
             // `.textCase` uppercases the *localized* string for display while the
             // catalog lookup still happens on the original-case key.
-            Text(title)
+            title
                 .textCase(.uppercase)
                 .font(.system(size: TVSettingsMetrics.labelFontSize, weight: .semibold))
                 .tracking(1.4)
