@@ -17,7 +17,7 @@
 //      overlap), bounded by the candidate channel ids too — never the
 //      unscoped time-only scan that froze the guide.
 //   3. Matching in Swift, via the pure `SportsMatcher` token logic, plus the
-//      viewer's remembered picks and a channel-name fallback — run only on the
+//      viewer's remembered picks and event-specific channel names — run only on the
 //      channels `CandidateIndex` finds for each fixture (see
 //      SportsChannelResolver+Index.swift).
 //
@@ -43,8 +43,8 @@ nonisolated enum ResolvedChannelSource: String, Codable, Hashable {
     /// conference ("Sonntags-Konferenz, 6. Spieltag") whose title says nothing
     /// about this fixture but whose body lists it among the games carried.
     case epgDescription
-    /// No EPG match; the channel's own name names both teams
-    /// ("DAZN 5 | Bayern vs Dortmund").
+    /// The channel name contains both teams in an explicit matchup format
+    /// ("Jets vs Canadiens"), for providers whose PPV/team channels lack EPG.
     case channelName
     /// An umbrella programme for the whole tour, on air at the start, that
     /// names no match ("Live ATP & WTA: Die Topspiele des Tages"). It may or
@@ -98,9 +98,7 @@ nonisolated struct ResolvedChannel: Codable, Hashable, Identifiable {
 // MARK: - Resolver
 
 nonisolated enum SportsChannelResolver {
-    /// A visible channel plus the pre-normalised name the channel-name fallback
-    /// matches against — built once in pass 1 so a wide fixture batch doesn't
-    /// re-fold the same names per fixture.
+    /// A visible channel, its normalized name, and its folded pick key.
     struct Channel {
         let summary: ResolvedStreamSummary
         let playlistID: UUID
@@ -411,7 +409,8 @@ nonisolated enum SportsChannelResolver {
     }
 
     /// Scores one channel against a fixture, returning the resolved channel or
-    /// `nil` when it carries neither a user pick, an EPG hit, nor a name match.
+    /// `nil` when it carries neither a user pick, EPG hit, nor event-specific
+    /// matchup name.
     private static func matchChannel(
         _ channel: Channel,
         context: FixtureMatchContext,
@@ -427,18 +426,19 @@ nonisolated enum SportsChannelResolver {
         let epg = channel.summary.epgChannelId
             .flatMap { guide[$0] }
             .flatMap { bestEPGHit(in: $0, homeTokens: homeTokens, awayTokens: awayTokens, kickoff: context.kickoff) }
-        let nameMatched = teamPresent(homeTokens, in: channel.nameHaystack)
-            && teamPresent(awayTokens, in: channel.nameHaystack)
-
         let source: ResolvedChannelSource
         let score: Int
-        if isPick {
+        if isPick, let epg {
             source = .userPick
-            score = pickScoreBase + (epg?.score ?? 0)
+            score = pickScoreBase + epg.score
         } else if let epg {
             source = epg.descriptionOnly ? .epgDescription : (epg.inOneField ? .epgTitleSubtitle : .epgSingleField)
             score = epg.score
-        } else if nameMatched {
+        } else if eventNameMatch(
+            homeTokens: homeTokens,
+            awayTokens: awayTokens,
+            in: channel.nameHaystack
+        ) {
             source = .channelName
             score = nameMatchScore
         } else if let umbrella = channel.summary.epgChannelId
@@ -537,9 +537,23 @@ nonisolated enum SportsChannelResolver {
         tokens.contains { haystack.contains(" \($0) ") }
     }
 
+    /// Accept only names that identify a specific matchup. Requiring an
+    /// explicit matchup separator prevents generic network/news channels from
+    /// matching a team alias while still supporting PPV and team feeds without
+    /// EPG data.
+    private static func eventNameMatch(
+        homeTokens: Set<String>,
+        awayTokens: Set<String>,
+        in haystack: String
+    ) -> Bool {
+        guard teamPresent(homeTokens, in: haystack), teamPresent(awayTokens, in: haystack) else {
+            return false
+        }
+        return [" vs ", " v ", " at ", " @ "].contains { haystack.contains($0) }
+    }
+
     // Mirror `SportsMatcher`'s field weights so the EPG tier ordering agrees
-    // with the matcher's own scoring; a user pick outscores any EPG match, and
-    // a channel-name-only hit is the weakest positive signal.
+    // with the matcher's own scoring. A user pick outscores any EPG match.
     static let subtitleWeight = 3
     static let titleWeight = 2
     static let descriptionWeight = 1

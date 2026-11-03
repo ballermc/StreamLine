@@ -26,34 +26,24 @@ nonisolated extension SportsChannelResolver {
 
         var resolved: [ResolvedChannel] = []
         for channel in channels {
-            let channelNamesSeries = SportsRaceMatcher.containsAny(series, in: channel.nameHaystack)
             let listings = channel.summary.epgChannelId.flatMap { guide[$0] } ?? []
             let epg = bestRaceHit(
                 in: listings,
                 series: series,
                 kind: kind,
-                channelNamesSeries: channelNamesSeries,
                 kickoff: fixture.startDate
             )
             let isPick = pickIndex[
                 SportsChannelPicks.compositeKey(competitionKey: fixture.leagueId, channelKey: channel.key)
             ] != nil
-            // A series-named channel ("Sky Sports F1") with no guide entry at the
-            // session's start is a fallback; one airing something else is not.
-            let airingAtStart = listings.contains { $0.start <= fixture.startDate && $0.end > fixture.startDate }
-            let nameFallback = channelNamesSeries && !airingAtStart
-
             let source: ResolvedChannelSource
             let score: Int
-            if isPick {
+            if isPick, let epg {
                 source = .userPick
-                score = pickScoreBase + (epg?.score ?? 0)
+                score = pickScoreBase + epg.score
             } else if let epg {
                 source = epg.source
                 score = epg.score
-            } else if nameFallback {
-                source = .channelName
-                score = nameMatchScore
             } else {
                 continue
             }
@@ -79,15 +69,14 @@ nonisolated extension SportsChannelResolver {
 
     /// The best programme for a race session inside the kickoff window.
     ///
-    /// Tiers: series and this session named together in one headline field (or
-    /// the session named on a series-named channel) is the fixture line itself;
+    /// Tiers: series and this session named together in one headline field is
+    /// the fixture line itself;
     /// the series in the headline with the session elsewhere or unnamed is the
     /// next tier; the series only in the description is the weakest.
     private static func bestRaceHit(
         in candidates: [NormalizedCandidate],
         series: [String],
         kind: SportsSessionKind?,
-        channelNamesSeries: Bool,
         kickoff: Date
     ) -> RaceHit? {
         let windowStart = kickoff.addingTimeInterval(-SportsMatcher.leadTime)
@@ -116,7 +105,6 @@ nonisolated extension SportsChannelResolver {
             if let kind, namesThis,
                (seriesInTitle && titleSessions.contains(kind))
                || (seriesInSub && subtitleSessions.contains(kind))
-               || channelNamesSeries
             {
                 source = .epgTitleSubtitle
             } else if seriesInTitle || seriesInSub {

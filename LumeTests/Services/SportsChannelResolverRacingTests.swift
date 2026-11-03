@@ -158,7 +158,7 @@ struct SportsChannelResolverRacingTests {
         #expect(channels.isEmpty, "Sky Sports F1 is airing F2, so neither the guide nor its name offers it")
     }
 
-    @Test func `a series-named channel without guide data is a fallback`() async throws {
+    @Test func `a series-named channel without guide data is excluded`() async throws {
         let container = try makeContainer()
         let context = ModelContext(container)
         context.insert(stream("sky", name: "Sky Sports F1 HD", epgChannelId: nil))
@@ -166,8 +166,7 @@ struct SportsChannelResolverRacingTests {
         try context.save()
 
         let channels = try await resolve(session(.fp1, at: Date()), in: container)
-        #expect(channels.map(\.stream.name) == ["Sky Sports F1 HD"])
-        #expect(channels.first?.source == .channelName)
+        #expect(channels.isEmpty)
     }
 
     @Test(arguments: [

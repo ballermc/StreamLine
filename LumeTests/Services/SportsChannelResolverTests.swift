@@ -270,10 +270,10 @@ struct SportsChannelResolverTests {
         #expect(result[fixture.id]?.isEmpty == true)
     }
 
-    @Test func `channel name naming both teams is a fallback candidate`() async throws {
+    @Test func `event channel name can match without EPG evidence`() async throws {
         let container = try makeContainer()
         let context = ModelContext(container)
-        context.insert(stream("1", name: "DAZN 5 | Bayern vs Dortmund", epgChannelId: nil))
+        context.insert(stream("1", name: "NHL 02: Bayern vs Dortmund (11.3 7:00 PM ET)", epgChannelId: nil))
         try context.save()
 
         let kickoff = Date()
@@ -283,6 +283,19 @@ struct SportsChannelResolverTests {
         let channels = try #require(result[fixture.id])
         #expect(channels.count == 1)
         #expect(channels[0].source == .channelName)
+    }
+
+    @Test func `generic news channel is not a name match`() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        context.insert(stream("1", name: "Spectrum News 1 NY", epgChannelId: nil))
+        try context.save()
+
+        let kickoff = Date()
+        let fixture = bayernVsDortmund(kickoff: kickoff)
+        let result = await SportsChannelResolver.resolve(container: container, fixtures: [fixture], now: kickoff)
+
+        #expect(result[fixture.id]?.isEmpty == true)
     }
 
     @Test func `a user pick ranks above an EPG match`() async throws {
@@ -295,6 +308,7 @@ struct SportsChannelResolverTests {
         context.insert(stream("pick", name: "My Sports Channel", epgChannelId: "mine.de"))
         let kickoff = Date()
         context.insert(listing(channelId: "sky.de", title: "Bundesliga", subtitle: "Bayern vs Dortmund", start: kickoff))
+        context.insert(listing(channelId: "mine.de", title: "Bundesliga", subtitle: "Bayern vs Dortmund", start: kickoff))
         try context.save()
 
         picks.remember(competitionKey: leagueId, channelKey: "mine.de", playlistID: playlistID)

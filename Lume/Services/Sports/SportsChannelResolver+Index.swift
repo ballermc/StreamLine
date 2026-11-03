@@ -8,13 +8,12 @@
 //  Home rail and 11M for the hub's week of fixtures — each a handful of
 //  substring scans over the channel's name and guide.
 //
-//  Every signal the matchers accept names a word the channel's own name or
-//  in-window guide text contains: a team token (the matchers need both teams,
-//  so the home side alone is a sound filter), a racing series phrase, an
-//  umbrella competition phrase, or a remembered pick. All matching is on whole,
-//  space-bounded words of `SportsMatcher.normalize`d text, so a channel the
-//  index doesn't name would have scored `nil` anyway. The index only removes
-//  work; the matchers still decide.
+//  Every automatic signal the matchers accept names a word in the channel's
+//  in-window guide text or an event-specific channel name: a team token, a
+//  racing series phrase, or an umbrella competition phrase. Remembered picks
+//  are explicit overrides. All matching is on whole, space-bounded words of
+//  `SportsMatcher.normalize`d text. The index only removes work; the matchers
+//  still decide.
 //
 
 import Foundation
@@ -84,7 +83,7 @@ nonisolated extension SportsChannelResolver {
             }
         }
 
-        /// Channels whose name or guide contains the first word of any phrase —
+        /// Channels whose guide contains the first word of any phrase —
         /// a superset of those containing the whole phrase.
         func channels(mentioningAnyOf phrases: some Sequence<String>) -> Set<Int> {
             var result = Set<Int>()

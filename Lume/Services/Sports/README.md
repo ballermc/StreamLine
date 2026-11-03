@@ -152,7 +152,10 @@ passes, each cheaper than the last only once the earlier ones have narrowed it:
    a conference programme ("Sonntags-Konferenz, 6. Spieltag") names its games
    only in the body, so the first 400 characters are searched too.
 3. **Matching.** The pure `SportsMatcher` token logic in Swift, plus the viewer's
-   remembered picks and a channel-name fallback.
+   remembered picks, and event-specific channel names for PPV/team feeds that
+   have no EPG. A channel-name result must contain both teams in an explicit
+   matchup format such as "Jets vs Canadiens"; generic network/news names do
+   not qualify.
 
 ### Ranking
 
@@ -166,7 +169,7 @@ match `score`, then on proximity to kickoff:
 | 1 | `epgTitleSubtitle` | The EPG programme names **both** teams together in one field (title *or* sub-title) — the fixture line itself. |
 | 2 | `epgSingleField` | The EPG programme names both teams, but split across the title and sub-title. |
 | 3 | `epgDescription` | Both teams appear only in the programme's description — a multi-game conference whose title says nothing about this fixture. |
-| 4 | `channelName` | No EPG match; the channel's own name names both teams (`"DAZN 5 | Bayern vs Dortmund"`). |
+| 4 | `channelName` | Both teams occur in the channel name with an explicit matchup separator (`vs`, `v`, `at`, or `@`) — for PPV/team channels without EPG. |
 | 5 | `epgCompetition` | A tour-wide block on air at the start that names no match (`"Live ATP & WTA: Die Topspiele des Tages"`) — tennis only, see `SportsChannelResolver+Competition`. Never confident: the block may not show this match. |
 
 A team is "present" when any distinctive token from `SportsMatcher.tokens(for:)`
@@ -190,10 +193,10 @@ two teams, so `SportsChannelResolver+Racing` matches it on the **series**
 
 | Tier | Race signal |
 |---|---|
-| `epgTitleSubtitle` | Series and this session together in one field — or the session on a series-named channel ("Sky Sports F1" · "1. Freies Training"). |
+| `epgTitleSubtitle` | Series and this session together in one field ("Sky Sports F1" · "1. Freies Training"). |
 | `epgSingleField` | The series in the headline, the session split off or not named at all ("Formel 1 - Grand Prix von Aserbaidschan"); the kickoff window decides. |
 | `epgDescription` | The series only in the description. |
-| `channelName` | A series-named channel with nothing in its guide at the session's start. |
+| `channelName` | Not used for racing; race resolution requires a matching EPG programme. |
 
 A programme naming a **different** session of the weekend, or a support series
 (F2, F3, F1 Academy, Supercup), is never offered. The series phrase is cut before

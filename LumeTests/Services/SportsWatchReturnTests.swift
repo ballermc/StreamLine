@@ -35,7 +35,7 @@ private func makeChannel(_ id: String) -> ResolvedChannel {
         matchedTitle: nil,
         matchedStart: nil,
         score: 1,
-        source: .channelName,
+        source: .epgTitleSubtitle,
         isConfident: false
     )
 }
