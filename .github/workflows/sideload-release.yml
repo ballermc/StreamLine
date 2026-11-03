@@ -90,6 +90,15 @@ jobs:
           ref: ${{ env.ENGINE_REF }}
           path: LumeEngine
 
+      # The v0.3.0 FFmpeg artifact still places CFFmpeg's module map at the
+      # Headers root. Xcode flattens every static xcframework's Headers/
+      # directory into one include directory, so that collides with LibDovi's
+      # module.modulemap when AetherEngine is linked. Repack the verified
+      # artifact into the layout produced by LumeEngine's upstream fix.
+      - name: Prepare LumeEngine FFmpeg headers
+        working-directory: Lume
+        run: bash Scripts/prepare-lumeengine-binary.sh ../LumeEngine
+
       - name: Checkout LumeRecorder
         uses: actions/checkout@v5
         with:
