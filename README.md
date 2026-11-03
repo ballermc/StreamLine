@@ -12,7 +12,7 @@ Browse, search, and stream your Xtream Codes or **M3U/M3U8** playlists with a cl
 [![Swift](https://img.shields.io/badge/Swift-5.x-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0A84FF)](https://developer.apple.com/xcode/swiftui/)
 [![SwiftData](https://img.shields.io/badge/Persistence-SwiftData-30B0C7)](https://developer.apple.com/documentation/swiftdata)
-[![Issues](https://img.shields.io/github/issues/bilipp/Lume?color=F9EE00&labelColor=1f1f2e)](https://github.com/bilipp/Lume/issues)
+[![Issues](https://img.shields.io/github/issues/bilipp/Lume?color=F9EE00&labelColor=1f1f2e)](https://github.com/ballermc/StreamLine/issues)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?labelColor=1f1f2e)](LICENSE)
 
 </div>
@@ -55,7 +55,7 @@ artwork, cast, trailers, and ratings from **TMDB** and **MDBList** (IMDb, Rotten
 Metacritic, Trakt, Letterboxd), and your viewing activity can be scrobbled to
 **Trakt**, **Simkl** and **MDBList**.
 
-> **Note** — Lume is a player only. It ships with **no channels, streams, or content**
+> **Note** — StreamLine is a player only. It ships with **no channels, streams, or content**
 > of its own. You bring your own Xtream Codes credentials or M3U playlist from a
 > provider you are entitled to use. We do not condone piracy — please read the
 > [**Anti-Piracy Policy**](ANTI_PIRACY.md).
@@ -66,19 +66,19 @@ Metacritic, Trakt, Letterboxd), and your viewing activity can be scrobbled to
 
 <div align="center">
 
-<img src=".github/assets/readme/tvos-home.webp" alt="Lume on Apple TV — immersive home screen with hero carousel and trending rail" width="880">
+<img src=".github/assets/readme/tvos-home.webp" alt="StreamLine on Apple TV — immersive home screen with hero carousel and trending rail" width="880">
 
 **Apple TV** — immersive full-screen home with a crossfading TMDB hero and fold-based scroll snapping
 
 <br>
 
-<img src=".github/assets/readme/tvos-movie-hero.webp" alt="Lume movie detail on Apple TV with logo artwork, ratings and cast" width="880">
+<img src=".github/assets/readme/tvos-movie-hero.webp" alt="StreamLine movie detail on Apple TV with logo artwork, ratings and cast" width="880">
 
 **Apple TV** — movie detail with TMDB backdrop, logo treatment, ratings, and metadata
 
 <br>
 
-<img src=".github/assets/readme/macos-home.webp" alt="Lume on macOS showing the home dashboard in a window" width="880">
+<img src=".github/assets/readme/macos-home.webp" alt="StreamLine on macOS showing the home dashboard in a window" width="880">
 
 **Mac** — the same catalog in a resizable window, with profile switching in the toolbar
 
@@ -117,10 +117,10 @@ adapted per size class
 - **Multi-View**: watch up to four channels at once in a 2 / 3 / 2×2 grid, with the audio on whichever tile you pick. Each tile can come from a different playlist, which helps if your provider allows only one connection per account (two tiles on the same account still need two connections)
 - Channel zapping with recently-watched history
 - **In-player channel browser** on tvOS (left-press overlay with category/channel grid)
-- **Redesigned Live TV on tvOS**: a now-playing hero above the Guide shows the focused channel's live programme, time left and what's up next, beside a muted live preview of the channel (Lume Pro), over a glow tinted with the channel's logo colour — Small (the default, with two more guide rows), Large, Info Only or Off (the guide takes the full height) in Settings › Live TV; a glass category sidebar sits alongside both layouts
+- **Redesigned Live TV on tvOS**: a now-playing hero above the Guide shows the focused channel's live programme, time left and what's up next, beside a muted live preview of the channel (StreamLine Pro), over a glow tinted with the channel's logo colour — Small (the default, with two more guide rows), Large, Info Only or Off (the guide takes the full height) in Settings › Live TV; a glass category sidebar sits alongside both layouts
 - **Guide or List** is chosen in Settings › Live TV on every platform (Guide by default on tvOS, List elsewhere)
 - **Hold a channel** in the tvOS Guide to add it to Favorites or start Multi-View with it
-- **Recording server (DVR)** (Lume Pro): pair a self-hosted [LumeRecorder](https://github.com/bilipp/LumeRecorder) server on your network, or sign in to your [Dispatcharr](https://github.com/Dispatcharr/Dispatcharr) server's DVR (API key or username + password; channels from playlists that Dispatcharr serves), from Settings › Live TV, record the live channel now or schedule a programme from the Guide, and play back finished and in-progress recordings on every device — from the Live TV toolbar, Settings › Live TV, or (optionally) the tvOS Live TV sidebar
+- **Recording server (DVR)** (StreamLine Pro): pair a self-hosted [LumeRecorder](https://github.com/bilipp/LumeRecorder) server on your network, or sign in to your [Dispatcharr](https://github.com/Dispatcharr/Dispatcharr) server's DVR (API key or username + password; channels from playlists that Dispatcharr serves), from Settings › Live TV, record the live channel now or schedule a programme from the Guide, and play back finished and in-progress recordings on every device — from the Live TV toolbar, Settings › Live TV, or (optionally) the tvOS Live TV sidebar
 - Favorite channels and per-channel management
 
 #### 🏅 Sports Hub
@@ -130,7 +130,7 @@ adapted per size class
 - **EPG-based channel matching** resolves each fixture to a channel already in *your* playlists, so one tap starts playback; when several channels carry a match you get a picker, and your pick is remembered
 - Clean, Apple Sports / Strand-style cards tinted with each team's colours
 - Followed teams and leagues **sync across your devices** via iCloud or Lume Cloud, per profile
-- A **Lume Pro** feature; available on every platform and hideable from Settings
+- A **StreamLine Pro** feature; available on every platform and hideable from Settings
 
 #### 🎬 Movies & Series
 - Category-based browsing with poster grids and horizontal rails
@@ -169,7 +169,7 @@ adapted per size class
 - Optional **MDBList** sync via the OAuth 2.0 device flow — watched movies and episodes sync to your MDBList history, your history imports on connect (or on demand), and your MDBList watchlist gets its own Home row
 - **Clear watch history** from Settings to reset progress, watched markers, and last-watched dates across all content
 - **Now Playing integration** — lock-screen / Control Center metadata, artwork, and remote controls on every engine; playback on Apple TV surfaces on your iPhone's Apple TV remote
-- **Live Activity + Dynamic Island** (iOS) — glanceable now & next programme with live progress on the Lock Screen; tap to jump straight back into playback. **Background downloads** get one too: progress, speed and ETA for the file closest to finishing plus how many are behind it, updated while Lume is closed; tap to open the downloads list
+- **Live Activity + Dynamic Island** (iOS) — glanceable now & next programme with live progress on the Lock Screen; tap to jump straight back into playback. **Background downloads** get one too: progress, speed and ETA for the file closest to finishing plus how many are behind it, updated while StreamLine is closed; tap to open the downloads list
 
 #### 👤 Profiles
 - Multiple **user profiles**, each with its own watch history, progress, and favorites
@@ -181,10 +181,10 @@ adapted per size class
 - Manage multiple playlists — **Xtream Codes**, **M3U/M3U8**, **Stalker portals**, and **media servers** (add / edit / delete / switch)
 - M3U support: URL-based playlists, local file import, URL-tvg EPG auto-detection
 - Stalker portal support: MAC-address authentication (with a generated default MAC), with short-lived stream URLs resolved on demand at playback time
-- Media-server support: enter one URL and Lume auto-detects the kind —
+- Media-server support: enter one URL and StreamLine auto-detects the kind —
   - **Jellyfin** and **Emby**: movie and TV-show libraries with artwork, ratings and plot; username + password, session-token auth. Titles with several versions (a server's multiple files, or AIOStreams' aggregated streams) open a source picker before playback, and shows that are only listed per show (AIOStreams) load their episodes when opened
   - **Plex**: movie and TV-show sections with artwork, ratings and plot; sign in with your Plex account, paste an `X-Plex-Token`, or connect token-free to a server that allows unauthenticated local access
-  - **Silo**: enter the address you open Silo at; Lume signs in, finds Silo's Jellyfin-compatible service and syncs through it like a Jellyfin server (the server's Jellyfin compatibility must be turned on)
+  - **Silo**: enter the address you open Silo at; StreamLine signs in, finds Silo's Jellyfin-compatible service and syncs through it like a Jellyfin server (the server's Jellyfin compatibility must be turned on)
   - **WebDAV**: recursive folder walk, filenames parsed into movies and series; Basic auth, anonymous shares welcome
   - None of them carries live TV yet, and none downloads yet
 - Server info at a glance: status, active connections, expiry
@@ -195,7 +195,7 @@ adapted per size class
 
 ## Supported platforms
 
-Lume is a single SwiftUI codebase that adapts to each platform's idioms — including a
+StreamLine is a single SwiftUI codebase that adapts to each platform's idioms — including a
 dedicated focus-driven interface and top-shelf branding on tvOS.
 
 | Platform | Minimum OS | Devices |
@@ -211,7 +211,7 @@ dedicated focus-driven interface and top-shelf branding on tvOS.
 
 ## Playback engines
 
-Lume ships with five interchangeable engines, ordered into a **priority list** in
+StreamLine ships with five interchangeable engines, ordered into a **priority list** in
 **Settings**. Playback starts with your preferred engine and **automatically falls
 back** to the next one whenever an engine can't play a stream, so a codec or stream
 one engine chokes on is retried with another before any error is shown. The default
@@ -237,11 +237,11 @@ failure modes it is built to make structurally impossible.
 only plays once you move it up. In Multiview tiles and guide previews it runs muted and
 never switches the TV's display mode.
 
-Prefer a third-party app? Lume can hand streams off to an **external player** —
+Prefer a third-party app? StreamLine can hand streams off to an **external player** —
 **Infuse**, **VLC** or **VidHub** — via their deep-link APIs, selectable in **Settings**.
 Because not every app handles every stream — Infuse plays movies and series but no
 live channels — the hand-off covers **movies & series** by default, and can be
-switched to **live TV** or to both. Downloads always play in Lume, and playback falls
+switched to **live TV** or to both. Downloads always play in StreamLine, and playback falls
 back to the built-in player when the selected app is not installed.
 
 Send playback to the TV with **AirPlay** — a route picker sits in the player overlay.
@@ -251,21 +251,21 @@ for the cast and resumes where it left off (formats AVPlayer can't decode fall b
 audio-only). On macOS the picker appears on the AVPlayer engine, which routes the
 picked receiver directly.
 
-On iPhone and iPad, the same player button also casts to **Chromecast** (Lume Pro;
-AirPlay stays free). Pick a Google Cast device from Lume's device sheet and the stream
+On iPhone and iPad, the same player button also casts to **Chromecast** (StreamLine Pro;
+AirPlay stays free). Pick a Google Cast device from StreamLine's device sheet and the stream
 plays on Google's Default Media Receiver while the phone becomes a remote — play/pause,
 skip, scrubbing, volume, and previous/next item. Xtream streams are sent as HLS when
 the provider allows it. Xtream, M3U and Stalker sources can be cast; local downloads,
 recordings and sources that sign in with request headers (WebDAV, Jellyfin, Emby,
 Plex, Silo) can't, and the sheet says why. Closing the player keeps the TV playing,
 with a mini-controller above the tab bar to pause, stop or reopen the remote. If the
-receiver can't play a stream, Lume ends the cast and resumes on the device.
+receiver can't play a stream, StreamLine ends the cast and resumes on the device.
 
 ---
 
 ## Architecture
 
-Lume follows a clean, layered SwiftUI architecture:
+StreamLine follows a clean, layered SwiftUI architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -346,7 +346,7 @@ Scripts/                     Build helpers (env injection, frameworks)
 
 ## Getting started
 
-The easiest way to use Lume is to [**download it from the App Store**](https://apps.apple.com/us/app/lume-iptv-player/id6779551584) — available on iPhone, iPad, Mac, Apple TV, and Apple Vision Pro. To build from source, follow the steps below.
+Will make this better later.
 
 ### Requirements
 
@@ -377,9 +377,9 @@ cd ../Lume
 open Lume.xcodeproj
 ```
 
-Select the **Lume** scheme and a target destination (iPhone, Mac, Apple TV, or Vision
+Select the **StreamLine** scheme and a target destination (iPhone, Mac, Apple TV, or Vision
 Pro), then build and run (`⌘R`). On first launch, sign in with your Xtream credentials
-or import an M3U playlist, and Lume will sync your catalog.
+or import an M3U playlist, and StreamLine will sync your catalog.
 
 > Remote dependencies (KSPlayer, FFmpegKit, VLCKit, AetherEngine) are resolved automatically by Swift
 > Package Manager on first build.
@@ -391,7 +391,7 @@ or import an M3U playlist, and Lume will sync your catalog.
 > build, `ios-arm64` / `tvos-arm64` for device builds.
 
 **Code signing.** The project ships with the maintainer's Development Team
-(`DEVELOPMENT_TEAM`) and bundle identifier (`com.bilipp.lume`). Simulator builds run as
+(`DEVELOPMENT_TEAM`) and bundle identifier (`com.ballermc.streamline`). Simulator builds run as
 is. To run on a physical device, open **Signing & Capabilities** for each target and set
 your own team (and, if needed, a unique bundle identifier) — or clear the team for a
 simulator-only build. Don't commit these personal signing changes back to the repo.
@@ -437,7 +437,7 @@ SIMKL_CLIENT_SECRET=
 MDBLIST_CLIENT_ID=your_mdblist_oauth_client_id
 ```
 
-Every key is optional — Lume builds and runs fine with an empty `.env` or none at all.
+Every key is optional — StreamLine builds and runs fine with an empty `.env` or none at all.
 
 Trakt uses the **device OAuth flow** (no embedded web view), which works on tvOS as
 well as iOS/macOS. Tokens are stored securely in the Keychain.
@@ -463,7 +463,7 @@ the Keychain too.
 
 ## Testing
 
-Lume has an extensive test suite split across unit/integration tests (**Swift Testing**)
+StreamLine has an extensive test suite split across unit/integration tests (**Swift Testing**)
 and UI automation (**XCTest**).
 
 | Target | Framework | Coverage |
@@ -503,41 +503,9 @@ and JSON loaders so tests need no bundle-resource setup.
 ## Roadmap
 
 Planned features and enhancements are tracked as
-[**GitHub Issues**](https://github.com/bilipp/Lume/issues).
+[**GitHub Issues**](https://github.com/ballermc/StreamLine/issues).
 
 ---
-
-## Community
-
-<div align="center">
-
-<a href="https://discord.gg/DMnQfr69Ug">
-  <img src="https://img.shields.io/badge/Join_the_Lume_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the Lume Discord" height="44">
-</a>
-
-### [discord.gg/DMnQfr69Ug](https://discord.gg/DMnQfr69Ug)
-
-</div>
-
-The Discord is the fastest way to get help and the best place to follow where Lume is
-going:
-
-- 🛟 **Support** — playlist, EPG, and playback troubleshooting with people running the
-  same providers and devices
-- 🐞 **Bug reports** — quick triage before (or alongside) a [GitHub issue](https://github.com/bilipp/Lume/issues)
-- 🗺️ **Feature requests** — help shape what gets built next
-- 🚀 **Releases** — every new version announced as it ships, plus beta feedback
-- 💬 **Just hanging out** — talk to the maintainer and other users directly
-
-One rule: **no piracy talk** — no requests for, or sharing of, streams, playlists, or
-credentials. See the [**Anti-Piracy Policy**](ANTI_PIRACY.md).
-
----
-
-## Contributing
-
-> 💬 Question or feedback? The **[Discord](https://discord.gg/DMnQfr69Ug)** is usually
-> faster than an issue — see [Community](#community).
 
 Contributions are welcome! The short version:
 
@@ -555,11 +523,11 @@ localization, commit conventions, and the PR checklist.
 
 ## Anti-piracy
 
-Lume is a **player only** — it ships with no channels, streams, playlists, or media of
+StreamLine is a **player only** — it ships with no channels, streams, playlists, or media of
 any kind, and it pre-configures no providers. Every stream you watch comes solely from
 the Xtream Codes credentials or M3U playlist **you** supply.
 
-We do **not** condone or support piracy. Use Lume only with content you are legally
+We do **not** condone or support piracy. Use StreamLine only with content you are legally
 entitled to access — a legitimate IPTV subscription, your own playlists, or
 free-to-air and openly licensed streams. Requesting, sharing, or linking to pirated
 streams, playlists, or credentials is **not allowed** in this repository, issues, pull
@@ -572,13 +540,13 @@ joining the community.
 
 ## License
 
-Lume is free software, licensed under the **GNU Affero General Public License v3.0
+StreamLine is free software, licensed under the **GNU Affero General Public License v3.0
 (AGPL-3.0)**. See [`LICENSE`](LICENSE) for the full text.
 
-In short — you are free to use, study, modify, and redistribute Lume, but **any
+In short — you are free to use, study, modify, and redistribute StreamLine, but **any
 project that incorporates this code must also be released as open source under the
 AGPL-3.0**. This requirement extends to software offered over a network: if you run a
-modified version of Lume as a network service, you must make your modified source
+modified version of StreamLine as a network service, you must make your modified source
 available to its users.
 
 ```
@@ -597,5 +565,4 @@ PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 <br>
 <sub>Built with SwiftUI for iPhone, iPad, Mac, Apple TV & Vision Pro.</sub>
 <br>
-<sub>Questions, ideas, or bugs? <a href="https://discord.gg/DMnQfr69Ug"><b>Join us on Discord</b></a>.</sub>
 </div>
