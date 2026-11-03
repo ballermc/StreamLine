@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src=".github/assets/streamline-logo.svg" alt="StreamLine" width="640">
-
 ### StreamLine — a modern, native IPTV player for Apple platforms
 
 StreamLine is a fork of [Lume](https://github.com/bilipp/Lume), continuing its
