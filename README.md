@@ -1,8 +1,11 @@
 <div align="center">
 
-<img src=".github/assets/readme/lume-banner.webp" alt="Lume" width="640">
+<img src=".github/assets/readme/lume-banner.webp" alt="StreamLine" width="640">
 
-### A modern, native IPTV player for Apple platforms
+### StreamLine — a modern, native IPTV player for Apple platforms
+
+StreamLine is a fork of [Lume](https://github.com/bilipp/Lume), continuing its
+open-source IPTV player for Apple platforms under a new name.
 
 Browse, search, and stream your Xtream Codes or **M3U/M3U8** playlists with a clean SwiftUI interface — Live TV, Movies, and Series, enriched with metadata, EPG, and watch progress that follows you across your devices.
 
@@ -58,7 +61,8 @@ Browse, search, and stream your Xtream Codes or **M3U/M3U8** playlists with a cl
 
 ## Overview
 
-**Lume** is a native IPTV client for the Apple ecosystem. It connects to your own
+**StreamLine** is a native IPTV client for the Apple ecosystem and a fork of
+[Lume](https://github.com/bilipp/Lume). It connects to your own
 **Xtream Codes** provider or imports **M3U/M3U8** playlists, indexes the full catalog
 locally with **SwiftData** for instant, offline-capable browsing, and plays everything
 through a choice of five playback engines — from VLC's universal codec support to
