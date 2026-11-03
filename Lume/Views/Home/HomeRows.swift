@@ -18,6 +18,7 @@ struct HomeRow: View {
     /// Resume fractions keyed by series id, resolved once for the whole screen
     /// (`SeriesResumeLoader`) rather than per card — see `HomeMediaItem`.
     let seriesResume: [String: Double]
+    var liveSourceLabels: [String: String] = [:]
     let onPlayLive: (LiveStream) -> Void
     /// When set, each card gains a "Remove from Recently Watched" context menu.
     /// Only the Recently Watched row passes this; the others leave it nil.
@@ -41,6 +42,7 @@ struct HomeRow: View {
                         HomeItemCell(
                             item: item,
                             seriesResume: seriesResume,
+                            liveSourceLabel: liveSourceLabels[item.id],
                             onPlayLive: onPlayLive,
                             onRemove: onRemove,
                             onVote: onVote,
@@ -53,7 +55,10 @@ struct HomeRow: View {
                 .padding(.vertical, PosterCardMetrics.railVerticalPadding)
             }
             .scrollClipDisabled()
-            .frame(height: PosterCardMetrics.rowHeight)
+            .frame(
+                height: PosterCardMetrics.rowHeight
+                    + (liveSourceLabels.isEmpty ? 0 : 20)
+            )
         }
     }
 
@@ -84,6 +89,7 @@ struct HomeRow: View {
 private struct HomeItemCell: View {
     let item: HomeMediaItem
     let seriesResume: [String: Double]
+    let liveSourceLabel: String?
     let onPlayLive: (LiveStream) -> Void
     var onRemove: ((HomeMediaItem) -> Void)?
     var onVote: ((HomeMediaItem, RecommendationVote) -> Void)?
@@ -109,7 +115,12 @@ private struct HomeItemCell: View {
                 Button {
                     onPlayLive(stream)
                 } label: {
-                    HomePosterCard(title: item.title, imageURL: item.imageURL, isLive: true)
+                    HomePosterCard(
+                        title: item.title,
+                        imageURL: item.imageURL,
+                        subtitle: liveSourceLabel,
+                        isLive: true
+                    )
                 }
                 .posterCardButtonStyle()
             }
@@ -231,6 +242,7 @@ struct ForYouRow: View {
 private struct HomePosterCard: View {
     let title: String
     let imageURL: URL?
+    var subtitle: String?
     var progress: Double?
     var isLive: Bool = false
 
@@ -285,6 +297,15 @@ private struct HomePosterCard: View {
                 .font(PosterCardMetrics.titleFont)
                 .lineLimit(2)
                 .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
+
+            if let subtitle, !subtitle.isEmpty {
+                Text(verbatim: subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
+            }
         }
     }
 

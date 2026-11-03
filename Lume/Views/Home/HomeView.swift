@@ -268,7 +268,12 @@ struct HomeView: View {
         if isSectionEnabled(section) {
             switch section {
             case .recentlyWatched:
-                rail("Recently Watched", recentlyWatched, onRemove: removeFromRecentlyWatched)
+                rail(
+                    "Recently Watched",
+                    recentlyWatched,
+                    onRemove: removeFromRecentlyWatched,
+                    liveSourceLabels: liveSourceLabels
+                )
             case .favorites:
                 rail("Favorites", favorites)
             case .forYou:
@@ -311,13 +316,15 @@ struct HomeView: View {
     private func rail(
         _ title: LocalizedStringKey,
         _ items: [HomeMediaItem],
-        onRemove: ((HomeMediaItem) -> Void)? = nil
+        onRemove: ((HomeMediaItem) -> Void)? = nil,
+        liveSourceLabels: [String: String] = [:]
     ) -> some View {
         if !items.isEmpty {
             HomeRow(
                 title: title,
                 items: items,
                 seriesResume: seriesResume,
+                liveSourceLabels: liveSourceLabels,
                 onPlayLive: playChannel,
                 onRemove: onRemove,
                 onStartMultiView: startMultiView,
@@ -393,10 +400,33 @@ struct HomeView: View {
         if recentlyWatchedIncludesLiveTV {
             items += watchedStreams.filter { belongsToUnlockedPlaylist($0.id) }.excludingRestricted(restriction).map(HomeMediaItem.live)
         }
+
         return items
             .sorted { ($0.lastWatchedDate ?? .distantPast) > ($1.lastWatchedDate ?? .distantPast) }
             .prefix(10)
             .map(\.self)
+    }
+
+    private var liveSourceLabels: [String: String] {
+        let playlistNames = Dictionary(uniqueKeysWithValues: playlists.map { ($0.id, $0.name) })
+        let categoryNames = Dictionary(
+            uniqueKeysWithValues: playlists
+                .flatMap(\.categories)
+                .map { ($0.id, $0.name) }
+        )
+
+        return watchedStreams.reduce(into: [:]) { labels, stream in
+            let playlistID = UUID(uuidString: String(stream.id.prefix(36)))
+            let playlist = playlistID.flatMap { playlistNames[$0] }
+            let category = stream.categoryId.flatMap { categoryNames[$0] }
+            let parts = [playlist, category].compactMap { value in
+                guard let value, !value.isEmpty else { return nil }
+                return value
+            }
+            if !parts.isEmpty {
+                labels[HomeMediaItem.live(stream).id] = parts.joined(separator: " · ")
+            }
+        }
     }
 
     private var favorites: [HomeMediaItem] {
