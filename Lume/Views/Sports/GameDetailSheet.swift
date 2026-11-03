@@ -337,6 +337,8 @@ struct GameDetailSheet: View {
             HStack(spacing: 12) {
                 ChannelLogo(urlString: channel.stream.streamIcon, size: 36)
                 SportsChannelLabel(channel: channel, isLastWatched: channel.id == lastWatchedChannelID)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(-1)
                 Spacer(minLength: 8)
                 Label("Watch", systemImage: "play.fill")
                     .labelStyle(.titleAndIcon)

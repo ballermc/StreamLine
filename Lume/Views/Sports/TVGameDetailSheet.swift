@@ -341,6 +341,9 @@
                 Text(verbatim: channel.stream.name)
                     .font(.system(size: size, weight: .semibold))
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(-1)
                 if let badge = sportsQualityBadge(from: channel.stream.name) {
                     Text(verbatim: badge)
                         .font(.system(size: size * 0.6, weight: .bold))
