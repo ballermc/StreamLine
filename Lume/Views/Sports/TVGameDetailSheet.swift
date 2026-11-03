@@ -309,6 +309,8 @@
                         channelName(channel, size: 30)
                         channelSubtitle(channel)
                     }
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(-1)
                     Spacer(minLength: 16)
                     Label("Watch", systemImage: "play.fill")
                         .font(.system(size: 30, weight: .semibold))
@@ -338,10 +340,8 @@
 
         private func channelName(_ channel: ResolvedChannel, size: CGFloat) -> some View {
             HStack(spacing: 10) {
-                Text(verbatim: channel.stream.name)
+                SportsOverflowText(text: channel.stream.name, lineHeight: size + 8)
                     .font(.system(size: size, weight: .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     .layoutPriority(-1)
                 if let badge = sportsQualityBadge(from: channel.stream.name) {
@@ -352,6 +352,8 @@
                         .background(.white.opacity(0.18), in: Capsule())
                 }
             }
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .clipped()
         }
 
         @ViewBuilder

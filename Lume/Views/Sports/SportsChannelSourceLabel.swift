@@ -12,15 +12,14 @@ struct SportsChannelSourceLabel: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(.quaternary, in: Capsule())
                     .accessibilityLabel(Text(verbatim: accessibilityText))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .clipped()
+        .frame(maxWidth: 280, alignment: .leading)
     }
 
     private var text: String? {
@@ -43,8 +42,8 @@ struct SportsChannelSourceLabel: View {
     }
 }
 
-/// Clips long channel labels at rest and scrolls them continuously after the
-/// label remains highlighted for five seconds.
+/// Clips long channel labels at rest and scrolls them continuously when the
+/// channel row is available for interaction.
 struct SportsOverflowText: View {
     let text: String
     var lineHeight: CGFloat = 17
@@ -99,6 +98,10 @@ struct SportsOverflowText: View {
         .task(id: isHighlighted) {
             isScrolling = false
             guard isHighlighted else { return }
+            #if os(iOS) || os(macOS)
+                isScrolling = true
+                return
+            #endif
             do {
                 try await Task.sleep(nanoseconds: 5_000_000_000)
                 guard !Task.isCancelled else { return }
