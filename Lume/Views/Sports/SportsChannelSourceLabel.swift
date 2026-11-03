@@ -11,11 +11,14 @@ struct SportsChannelSourceLabel: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(.quaternary, in: Capsule())
                 .accessibilityLabel(Text(verbatim: accessibilityText))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
     }
 
     private var text: String? {
@@ -88,6 +91,8 @@ struct SportsOverflowText: View {
             }
         }
         .frame(height: lineHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
         .onPreferenceChange(SportsTextWidthKey.self) { contentWidth = $0 }
         .task(id: isHighlighted) {
             isScrolling = false
@@ -104,10 +109,12 @@ struct SportsOverflowText: View {
     }
 
     private var isHighlighted: Bool {
-        #if os(macOS)
-            return isHovering || isFocused
-        #else
+        #if os(iOS) || os(macOS)
+            return true
+        #elseif os(tvOS) || os(visionOS)
             return isFocused
+        #else
+            return false
         #endif
     }
 

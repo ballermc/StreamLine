@@ -58,14 +58,19 @@
                 SportsOverflowText(text: channel.stream.name, lineHeight: 34)
                     .font(.system(size: 28, weight: .semibold))
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(-1)
+                    .clipped()
                 if let badge = sportsQualityBadge(from: channel.stream.name) {
                     Text(verbatim: badge)
                         .font(.system(size: 18, weight: .bold))
+                        .fixedSize()
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(.white.opacity(0.18), in: Capsule())
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipped()
         }
 
         @ViewBuilder

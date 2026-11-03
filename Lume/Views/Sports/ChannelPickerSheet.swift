@@ -101,6 +101,7 @@ struct SportsChannelRow: View {
             ChannelLogo(urlString: channel.stream.streamIcon, size: 36)
             SportsChannelLabel(channel: channel, isLastWatched: isLastWatched)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(-1)
             Spacer(minLength: 8)
             Image(systemName: "play.circle.fill")
                 .font(.title2)
@@ -146,14 +147,19 @@ struct SportsChannelLabel: View {
             SportsOverflowText(text: channel.stream.name)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 .font(.subheadline.weight(.medium))
+                .layoutPriority(-1)
+                .clipped()
             if let badge = sportsQualityBadge(from: channel.stream.name) {
                 Text(verbatim: badge)
                     .font(.caption2.weight(.bold))
+                    .fixedSize()
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
                     .background(.quaternary, in: Capsule())
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .clipped()
     }
 
     @ViewBuilder
