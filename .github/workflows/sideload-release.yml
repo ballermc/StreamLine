@@ -176,7 +176,7 @@ jobs:
             -scheme Lume \
             -configuration Sideload \
             -destination '${{ matrix.destination }}' \
-            -archivePath "$RUNNER_TEMP/Lume-Sideload.xcarchive" \
+            -archivePath "$RUNNER_TEMP/StreamLine-Sideload.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
@@ -189,12 +189,12 @@ jobs:
         if: matrix.format == 'ipa'
         run: |
           VERSION="$RELEASE_TAG"
-          APP=$(find "$RUNNER_TEMP/Lume-Sideload.xcarchive/Products" -name "*.app" | head -1)
+          APP=$(find "$RUNNER_TEMP/StreamLine-Sideload.xcarchive/Products" -name "*.app" | head -1)
 
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -r "$APP" "$RUNNER_TEMP/ipa/Payload/"
           cd "$RUNNER_TEMP/ipa"
-          zip -r "$RUNNER_TEMP/Lume-${VERSION}-${{ matrix.platform }}-Sideload.ipa" Payload
+          zip -r "$RUNNER_TEMP/StreamLine-${VERSION}-${{ matrix.platform }}-Sideload.ipa" Payload
 
       # ── Package: zip (macOS) ────────────────────────────────────────────────
       # ditto preserves symlinks and resource forks inside the .app bundle.
@@ -203,11 +203,11 @@ jobs:
         if: matrix.format == 'zip'
         run: |
           VERSION="$RELEASE_TAG"
-          APP=$(find "$RUNNER_TEMP/Lume-Sideload.xcarchive/Products" -name "*.app" | head -1)
+          APP=$(find "$RUNNER_TEMP/StreamLine-Sideload.xcarchive/Products" -name "*.app" | head -1)
 
           ditto -c -k --sequesterRsrc --keepParent \
             "$APP" \
-            "$RUNNER_TEMP/Lume-${VERSION}-macOS-Sideload.zip"
+            "$RUNNER_TEMP/StreamLine-${VERSION}-macOS-Sideload.zip"
 
       # Collect each platform asset so one downstream job creates the draft
       # release once and attaches all three files together.
@@ -215,7 +215,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sideload-${{ matrix.platform }}
-          path: ${{ runner.temp }}/Lume-${{ env.RELEASE_TAG }}-${{ matrix.platform }}-Sideload.${{ matrix.format }}
+          path: ${{ runner.temp }}/StreamLine-${{ env.RELEASE_TAG }}-${{ matrix.platform }}-Sideload.${{ matrix.format }}
           if-no-files-found: error
 
   draft-release:
@@ -237,4 +237,4 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}
           draft: true
-          files: ${{ runner.temp }}/sideload-assets/Lume-*
+          files: ${{ runner.temp }}/sideload-assets/StreamLine-*
