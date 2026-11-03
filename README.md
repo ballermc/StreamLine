@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/readme/lume-banner.webp" alt="StreamLine" width="640">
+<img src=".github/assets/streamline-logo.svg" alt="StreamLine" width="640">
 
 ### StreamLine — a modern, native IPTV player for Apple platforms
 
@@ -145,7 +145,7 @@ adapted per size class
 
 #### 🏅 Sports Hub
 - Follow your **leagues and teams** and get a Sports tab and Home rail of their fixtures — yesterday's results, today's games, and what's upcoming
-- **150+ competitions** across football (every major European, American, Asian and African league, cups and national teams), the NFL, NBA, MLB and NHL, college sports, rugby union and league, AFL, cricket (IPL, T20 World Cup, Big Bash, County Championship and more), ATP and WTA tennis, lacrosse, Formula 1, IndyCar, NASCAR and the UFC
+- **150+ competitions** across men's and women's football (major European, American, Asian and African leagues, cups and national teams), American football (NFL, UFL and college), basketball (NBA, WNBA, G League, FIBA and college), baseball and softball (MLB, college and World Baseball Classic), ice hockey (NHL and college), rugby union and league (including NRL), AFL, cricket (IPL, T20 World Cup, Big Bash, County Championship and more), ATP and WTA tennis, lacrosse, Formula 1, IndyCar, NASCAR, and combat sports (UFC and PFL)
 - **Live scores, standings, and full game detail** — timeline, team-stat bars, lineups, and F1 sessions with driver/constructor standings — from **ESPN**
 - **EPG-based channel matching** resolves each fixture to a channel already in *your* playlists, so one tap starts playback; when several channels carry a match you get a picker, and your pick is remembered
 - Clean, Apple Sports / Strand-style cards tinted with each team's colours
