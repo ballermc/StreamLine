@@ -57,6 +57,22 @@ struct SportsOverflowText: View {
     private let pointsPerSecond: CGFloat = 28
 
     var body: some View {
+        #if os(iOS) || os(macOS)
+            ScrollView(.horizontal, showsIndicators: false) {
+                label
+                    .padding(.trailing, 8)
+            }
+            .frame(height: lineHeight)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .clipped()
+            .accessibilityLabel(Text(verbatim: text))
+        #else
+            marqueeBody
+        #endif
+    }
+
+    #if os(tvOS) || os(visionOS)
+        private var marqueeBody: some View {
         GeometryReader { geometry in
             let overflows = contentWidth > geometry.size.width
             let shouldScroll = isScrolling && overflows
@@ -112,6 +128,7 @@ struct SportsOverflowText: View {
         }
         .accessibilityLabel(Text(verbatim: text))
     }
+    #endif
 
     private var isHighlighted: Bool {
         #if os(iOS) || os(macOS)
