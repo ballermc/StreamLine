@@ -57,7 +57,7 @@ struct HomeRow: View {
             .scrollClipDisabled()
             .frame(
                 height: PosterCardMetrics.rowHeight
-                    + (liveSourceLabels.isEmpty ? 0 : 28)
+                    + (liveSourceLabels.isEmpty ? 0 : 34)
             )
         }
     }
@@ -339,13 +339,17 @@ private struct HomeLiveSourcePill: View {
 
     var body: some View {
         #if os(tvOS)
-            SportsOverflowText(text: text, lineHeight: 26)
+            SportsOverflowText(text: text, lineHeight: 24)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .frame(
+                    width: PosterCardMetrics.posterWidth - 16,
+                    height: 24,
+                    alignment: .leading
+                )
                 .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .frame(width: PosterCardMetrics.posterWidth, height: 34, alignment: .leading)
                 .background(.quaternary, in: Capsule())
-                .frame(width: PosterCardMetrics.posterWidth, height: 26, alignment: .leading)
                 .clipped()
                 .accessibilityLabel(Text(verbatim: text))
         #else
@@ -357,9 +361,9 @@ private struct HomeLiveSourcePill: View {
                     .fixedSize(horizontal: true, vertical: false)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(.quaternary, in: Capsule())
             }
-            .frame(width: PosterCardMetrics.posterWidth, height: 26, alignment: .leading)
+            .frame(width: PosterCardMetrics.posterWidth, height: 34, alignment: .leading)
+            .background(.quaternary, in: Capsule())
             .clipped()
             .accessibilityLabel(Text(verbatim: text))
         #endif
