@@ -7,19 +7,29 @@ struct SportsChannelSourceLabel: View {
     var body: some View {
         Group {
             if let text {
-                Text(verbatim: text)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.quaternary, in: Capsule())
-                    .accessibilityLabel(Text(verbatim: accessibilityText))
+                #if os(tvOS)
+                    SportsOverflowText(text: text, lineHeight: 26)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.quaternary, in: Capsule())
+                        .accessibilityLabel(Text(verbatim: accessibilityText))
+                #else
+                    Text(verbatim: text)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.quaternary, in: Capsule())
+                        .accessibilityLabel(Text(verbatim: accessibilityText))
+                #endif
             }
         }
-        .frame(maxWidth: 280, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var text: String? {
