@@ -8,9 +8,11 @@ struct SportsChannelSourceLabel: View {
         Group {
             if let text {
                 #if os(tvOS)
-                    SportsOverflowText(text: text, lineHeight: 26)
+                    Text(verbatim: text)
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(.quaternary, in: Capsule())
@@ -29,6 +31,7 @@ struct SportsChannelSourceLabel: View {
                 #endif
             }
         }
+        .fixedSize(horizontal: true, vertical: false)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
