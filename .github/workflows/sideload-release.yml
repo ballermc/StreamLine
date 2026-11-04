@@ -241,6 +241,8 @@ jobs:
     name: Create draft release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Download sideload assets
@@ -253,6 +255,10 @@ jobs:
       - name: Create draft release and upload assets
         uses: softprops/action-gh-release@v2
         with:
+          # Set RELEASE_TOKEN to a PAT or fine-grained token with repository
+          # Contents: Read and write access when the repository disallows
+          # GITHUB_TOKEN release creation. Otherwise the workflow token is used.
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}
           draft: true
