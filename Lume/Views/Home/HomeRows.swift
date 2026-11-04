@@ -57,7 +57,7 @@ struct HomeRow: View {
             .scrollClipDisabled()
             .frame(
                 height: PosterCardMetrics.rowHeight
-                    + (liveSourceLabels.isEmpty ? 0 : 20)
+                    + (liveSourceLabels.isEmpty ? 0 : 28)
             )
         }
     }
@@ -293,18 +293,19 @@ private struct HomePosterCard: View {
             .clipShape(RoundedRectangle(cornerRadius: PosterCardMetrics.cornerRadius))
             .shadow(radius: 2)
 
-            Text(title)
-                .font(PosterCardMetrics.titleFont)
-                .lineLimit(2)
-                .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
+            if isLive {
+                SportsOverflowText(text: title)
+                    .font(PosterCardMetrics.titleFont)
+                    .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
+            } else {
+                Text(title)
+                    .font(PosterCardMetrics.titleFont)
+                    .lineLimit(2)
+                    .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
+            }
 
             if let subtitle, !subtitle.isEmpty {
-                Text(verbatim: subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
+                HomeLiveSourcePill(text: subtitle)
             }
         }
     }
@@ -318,6 +319,7 @@ private struct HomePosterCard: View {
         } else {
             Rectangle().fill(Color.gray.opacity(0.3))
         }
+
     }
 
     /// The plate behind transparent channel logos. Fixed dark grays (not
@@ -329,5 +331,36 @@ private struct HomePosterCard: View {
             startPoint: .top,
             endPoint: .bottom
         )
+    }
+}
+
+private struct HomeLiveSourcePill: View {
+    let text: String
+
+    var body: some View {
+        #if os(tvOS)
+            SportsOverflowText(text: text, lineHeight: 26)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.quaternary, in: Capsule())
+                .frame(width: PosterCardMetrics.posterWidth, height: 26, alignment: .leading)
+                .clipped()
+        #else
+            ScrollView(.horizontal, showsIndicators: false) {
+                Text(verbatim: text)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.quaternary, in: Capsule())
+            }
+            .frame(width: PosterCardMetrics.posterWidth, height: 26, alignment: .leading)
+            .clipped()
+        #endif
+        .accessibilityLabel(Text(verbatim: text))
     }
 }
