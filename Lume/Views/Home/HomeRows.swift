@@ -347,6 +347,7 @@ private struct HomeLiveSourcePill: View {
                 .background(.quaternary, in: Capsule())
                 .frame(width: PosterCardMetrics.posterWidth, height: 26, alignment: .leading)
                 .clipped()
+                .accessibilityLabel(Text(verbatim: text))
         #else
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(verbatim: text)
@@ -360,7 +361,7 @@ private struct HomeLiveSourcePill: View {
             }
             .frame(width: PosterCardMetrics.posterWidth, height: 26, alignment: .leading)
             .clipped()
+            .accessibilityLabel(Text(verbatim: text))
         #endif
-        .accessibilityLabel(Text(verbatim: text))
     }
 }
