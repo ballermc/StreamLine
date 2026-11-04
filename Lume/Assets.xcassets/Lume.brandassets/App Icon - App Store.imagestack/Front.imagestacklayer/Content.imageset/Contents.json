@@ -6,8 +6,9 @@
       "scale" : "1x"
     },
     {
-      "idiom" : "tv",
-      "scale" : "2x"
+      "filename": "front_2560.png",
+      "idiom": "tv",
+      "scale": "2x"
     }
   ],
   "info" : {
