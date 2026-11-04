@@ -6,6 +6,21 @@ on:
       tag:
         description: Version/tag to create for the draft release (e.g. v3.0.1)
         required: true
+      build_ios:
+        description: Build the iOS sideload
+        type: boolean
+        required: true
+        default: true
+      build_tvos:
+        description: Build the tvOS sideload
+        type: boolean
+        required: true
+        default: true
+      build_macos:
+        description: Build the macOS sideload
+        type: boolean
+        required: true
+        default: true
 
 # The build jobs attach assets to the release, which requires write access to
 # repo contents. The default GITHUB_TOKEN is read-only when the repo's default
@@ -37,6 +52,7 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.platform }} Sideload
+    if: matrix.enabled
     # Must build with the same Xcode major as the App Store archives
     # (ship-release, local Xcode 27): the linked SDK decides SDK-gated behaviour
     # such as iPhone Duo layout — an iOS 26 SDK IPA runs in compatibility mode
@@ -53,12 +69,15 @@ jobs:
           - platform: iOS
             destination: generic/platform=iOS
             format: ipa
+            enabled: ${{ inputs.build_ios }}
           - platform: tvOS
             destination: generic/platform=tvOS
             format: ipa
+            enabled: ${{ inputs.build_tvos }}
           - platform: macOS
             destination: generic/platform=macOS
             format: zip
+            enabled: ${{ inputs.build_macos }}
 
     # Every `run` step works inside the app checkout (see the sibling-layout note
     # on the checkout steps). Packaging steps use absolute $RUNNER_TEMP paths and
@@ -209,8 +228,8 @@ jobs:
             "$APP" \
             "$RUNNER_TEMP/StreamLine-${VERSION}-macOS-Sideload.zip"
 
-      # Collect each platform asset so one downstream job creates the draft
-      # release once and attaches all three files together.
+      # Collect each selected platform asset so one downstream job creates the
+      # draft release once and attaches the available files together.
       - name: Upload sideload asset
         uses: actions/upload-artifact@v4
         with:
