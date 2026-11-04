@@ -52,7 +52,6 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.platform }} Sideload
-    if: matrix.enabled
     # Must build with the same Xcode major as the App Store archives
     # (ship-release, local Xcode 27): the linked SDK decides SDK-gated behaviour
     # such as iPhone Duo layout — an iOS 26 SDK IPA runs in compatibility mode
@@ -65,19 +64,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: iOS
-            destination: generic/platform=iOS
-            format: ipa
-            enabled: ${{ inputs.build_ios }}
-          - platform: tvOS
-            destination: generic/platform=tvOS
-            format: ipa
-            enabled: ${{ inputs.build_tvos }}
-          - platform: macOS
-            destination: generic/platform=macOS
-            format: zip
-            enabled: ${{ inputs.build_macos }}
+        platform: >-
+          ${{ fromJSON(
+            inputs.build_ios && inputs.build_tvos && inputs.build_macos && '["iOS","tvOS","macOS"]' ||
+            inputs.build_ios && inputs.build_tvos && '["iOS","tvOS"]' ||
+            inputs.build_ios && inputs.build_macos && '["iOS","macOS"]' ||
+            inputs.build_tvos && inputs.build_macos && '["tvOS","macOS"]' ||
+            inputs.build_ios && '["iOS"]' ||
+            inputs.build_tvos && '["tvOS"]' ||
+            inputs.build_macos && '["macOS"]' ||
+            '[]'
+          ) }}
 
     # Every `run` step works inside the app checkout (see the sibling-layout note
     # on the checkout steps). Packaging steps use absolute $RUNNER_TEMP paths and
@@ -190,11 +187,16 @@ jobs:
       # macOS via right-click → Open to bypass Gatekeeper).
       - name: Archive (Sideload, unsigned)
         run: |
+          case "${{ matrix.platform }}" in
+            iOS) DESTINATION="generic/platform=iOS" ;;
+            tvOS) DESTINATION="generic/platform=tvOS" ;;
+            macOS) DESTINATION="generic/platform=macOS" ;;
+          esac
           xcodebuild archive \
             -project Lume.xcodeproj \
             -scheme Lume \
             -configuration Sideload \
-            -destination '${{ matrix.destination }}' \
+            -destination "$DESTINATION" \
             -archivePath "$RUNNER_TEMP/StreamLine-Sideload.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -205,7 +207,7 @@ jobs:
       # ── Package: IPA (iOS / tvOS) ────────────────────────────────────────────
       # An IPA is a zip with Payload/<AppName>.app at its root.
       - name: Package IPA
-        if: matrix.format == 'ipa'
+        if: matrix.platform == 'iOS' || matrix.platform == 'tvOS'
         run: |
           VERSION="$RELEASE_TAG"
           APP=$(find "$RUNNER_TEMP/StreamLine-Sideload.xcarchive/Products" -name "*.app" | head -1)
@@ -219,7 +221,7 @@ jobs:
       # ditto preserves symlinks and resource forks inside the .app bundle.
       # plain zip would break the bundle's internal structure.
       - name: Package zip
-        if: matrix.format == 'zip'
+        if: matrix.platform == 'macOS'
         run: |
           VERSION="$RELEASE_TAG"
           APP=$(find "$RUNNER_TEMP/StreamLine-Sideload.xcarchive/Products" -name "*.app" | head -1)
@@ -234,7 +236,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sideload-${{ matrix.platform }}
-          path: ${{ runner.temp }}/StreamLine-${{ env.RELEASE_TAG }}-${{ matrix.platform }}-Sideload.${{ matrix.format }}
+          path: ${{ runner.temp }}/StreamLine-${{ env.RELEASE_TAG }}-${{ matrix.platform }}-Sideload.${{ matrix.platform == 'macOS' && 'zip' || 'ipa' }}
           if-no-files-found: error
 
   draft-release:
