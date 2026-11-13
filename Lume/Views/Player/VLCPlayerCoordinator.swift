@@ -368,7 +368,7 @@ final class VLCPlayerCoordinator: NSObject, ObservableObject {
                     let name = $0.codecName()
                     return PlayerAudioInfo(codec: name.isEmpty ? nil : name, channels: 0, sampleRate: 0)
                 },
-                bitrateKbps: mediaPlayer.media?.statistics.map { Double($0.inputBitrate * 8_000) }
+                bitrateKbps: mediaPlayer.media.map { Double($0.statistics.inputBitrate * 8_000) }
             )
             : nil
         if info != videoInfo { videoInfo = info }
