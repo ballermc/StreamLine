@@ -129,6 +129,12 @@ jobs:
           ref: ${{ env.CLOUD_REF }}
           path: LumeCloud
 
+      - name: Cache LumeEngine FFmpeg binary
+        uses: actions/cache@v4
+        with:
+          path: LumeEngine/BinaryDependencies
+          key: lumeengine-ffmpeg-${{ env.ENGINE_REF }}-${{ hashFiles('Lume/Scripts/prepare-lumeengine-binary.sh') }}
+
       # Pinned, not latest-stable: latest-stable silently fell back to Xcode 26
       # (iOS 26.5 SDK) while the App Store build used 27. Keep this on the
       # Xcode ship-release archives with; bump both together.
@@ -181,6 +187,16 @@ jobs:
             [ -n "$MDBLIST_CLIENT_ID" ]     && echo "MDBLIST_CLIENT_ID=$MDBLIST_CLIENT_ID"
           } > .env || true
 
+      - name: Cache Xcode and SwiftPM build data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/StreamLine-DerivedData
+            ~/Library/Developer/Lume-SharedSPM
+          key: xcode-27-${{ matrix.platform }}-${{ hashFiles('Lume/Package.resolved', 'Lume/LumeAetherBridge/Package.resolved') }}
+          restore-keys: |
+            xcode-27-${{ matrix.platform }}-
+
       # ── Archive (unsigned) ───────────────────────────────────────────────────
       # CODE_SIGNING_ALLOWED=NO skips all signing. The resulting .app is unsigned;
       # users re-sign it themselves (iOS/tvOS via AltStore/Sideloadly,
@@ -197,6 +213,8 @@ jobs:
             -scheme Lume \
             -configuration Sideload \
             -destination "$DESTINATION" \
+            -derivedDataPath "$RUNNER_TEMP/StreamLine-DerivedData" \
+            -clonedSourcePackagesDirPath "$HOME/Library/Developer/Lume-SharedSPM" \
             -archivePath "$RUNNER_TEMP/StreamLine-Sideload.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
