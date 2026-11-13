@@ -294,7 +294,7 @@ private struct HomePosterCard: View {
             .shadow(radius: 2)
 
             if isLive {
-                SportsOverflowText(text: title)
+                SportsOverflowText(text: title, lineHeight: 32)
                     .font(PosterCardMetrics.titleFont)
                     .frame(width: PosterCardMetrics.posterWidth, alignment: .leading)
             } else {
