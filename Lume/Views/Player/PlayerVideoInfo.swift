@@ -26,7 +26,21 @@ nonisolated struct PlayerVideoInfo: Equatable {
     let height: Int
     let fps: Double
     let codec: String?
-    let audioInfo: PlayerAudioInfo? = nil
+    let audioInfo: PlayerAudioInfo?
+
+    init(
+        width: Int,
+        height: Int,
+        fps: Double,
+        codec: String?,
+        audioInfo: PlayerAudioInfo? = nil
+    ) {
+        self.width = width
+        self.height = height
+        self.fps = fps
+        self.codec = codec
+        self.audioInfo = audioInfo
+    }
 
     /// A short marketing-style quality tag derived from the pixel width.
     ///
