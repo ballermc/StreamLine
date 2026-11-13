@@ -27,19 +27,22 @@ nonisolated struct PlayerVideoInfo: Equatable {
     let fps: Double
     let codec: String?
     let audioInfo: PlayerAudioInfo?
+    let bitrateKbps: Double?
 
     init(
         width: Int,
         height: Int,
         fps: Double,
         codec: String?,
-        audioInfo: PlayerAudioInfo? = nil
+        audioInfo: PlayerAudioInfo? = nil,
+        bitrateKbps: Double? = nil
     ) {
         self.width = width
         self.height = height
         self.fps = fps
         self.codec = codec
         self.audioInfo = audioInfo
+        self.bitrateKbps = bitrateKbps
     }
 
     /// A short marketing-style quality tag derived from the pixel width.
@@ -102,6 +105,25 @@ nonisolated struct PlayerVideoInfo: Equatable {
         let places = rounded.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 2
         return rounded.formatted(.number.precision(.fractionLength(places)))
     }
+
+    var frameRateDescription: String? {
+        frameRateText
+    }
+
+    var bitrateDescription: String? {
+        guard let bitrateKbps, bitrateKbps > 0 else { return nil }
+        if bitrateKbps >= 1_000 {
+            return "\(formatted(bitrateKbps / 1_000)) Mbps"
+        }
+        return "\(formatted(bitrateKbps)) kbps"
+    }
+
+    private func formatted(_ value: Double) -> String {
+        let rounded = value.rounded()
+        return rounded == value
+            ? rounded.formatted()
+            : value.formatted(.number.precision(.fractionLength(1)))
+    }
 }
 
 nonisolated struct PlayerAudioInfo: Equatable {
@@ -115,7 +137,7 @@ nonisolated struct PlayerAudioInfo: Equatable {
             parts.append(codec.uppercased())
         }
         if channels > 0 {
-            parts.append(String(localized: "\(channels) ch"))
+            parts.append(channelDescription)
         }
         if sampleRate > 0 {
             let rounded = sampleRate.rounded()
@@ -133,7 +155,7 @@ nonisolated struct PlayerAudioInfo: Equatable {
             parts.append(codec.uppercased())
         }
         if channels > 0 {
-            parts.append(String(localized: "\(channels) audio channels"))
+            parts.append(String(localized: "\(channelDescription) audio"))
         }
         if sampleRate > 0 {
             let rounded = sampleRate.rounded()
@@ -143,6 +165,34 @@ nonisolated struct PlayerAudioInfo: Equatable {
             parts.append(String(localized: "\(value) hertz"))
         }
         return parts
+    }
+
+    var detailLines: [String] {
+        var details: [String] = []
+        if let codec, !codec.isEmpty {
+            details.append(String(localized: "Audio: \(codec.uppercased())"))
+        }
+        if channels > 0 {
+            details.append(String(localized: "Audio channels: \(channelDescription)"))
+        }
+        if sampleRate > 0 {
+            let rounded = sampleRate.rounded()
+            let value = rounded == sampleRate
+                ? rounded.formatted()
+                : sampleRate.formatted(.number.precision(.fractionLength(1)))
+            details.append(String(localized: "Sample rate: \(value) Hz"))
+        }
+        return details
+    }
+
+    private var channelDescription: String {
+        switch channels {
+        case 1: "Mono"
+        case 2: "Stereo"
+        case 6: "5.1"
+        case 8: "7.1"
+        default: String(localized: "\(channels) channels")
+        }
     }
 }
 

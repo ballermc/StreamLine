@@ -80,6 +80,7 @@ struct RefreshAllProgressView: View {
                     }
                 }
         }
+        .background(Color.black.ignoresSafeArea())
         .interactiveDismissDisabled(phase == .refreshing)
         .task {
             let task = Task { await refreshAll() }

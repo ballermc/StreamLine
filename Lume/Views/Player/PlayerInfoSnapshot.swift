@@ -134,4 +134,32 @@ struct PlayerInfoSnapshot: Equatable {
     var infoBadges: [String] {
         videoInfo?.badgeParts ?? []
     }
+
+    /// Full technical stream details for the tvOS Info panel. Unlike the
+    /// compact caption, this keeps each value on its own row so long audio
+    /// metadata cannot collide with programme text.
+    var streamDetails: [String] {
+        guard let videoInfo else { return [] }
+
+        var details: [String] = []
+        if videoInfo.width > 0, videoInfo.height > 0 {
+            details.append(String(localized: "Resolution: \(videoInfo.width) × \(videoInfo.height)"))
+        }
+        if !videoInfo.qualityTag.isEmpty {
+            details.append(String(localized: "Quality: \(videoInfo.qualityTag)"))
+        }
+        if let codec = videoInfo.codec, !codec.isEmpty {
+            details.append(String(localized: "Video: \(codec.uppercased())"))
+        }
+        if let frameRate = videoInfo.frameRateDescription {
+            details.append(String(localized: "Frame rate: \(frameRate) fps"))
+        }
+        if let bitrate = videoInfo.bitrateDescription {
+            details.append(String(localized: "Bitrate: \(bitrate)"))
+        }
+        if let audio = videoInfo.audioInfo {
+            details.append(contentsOf: audio.detailLines)
+        }
+        return details
+    }
 }

@@ -481,6 +481,7 @@
                 synopsis: infoSynopsis,
                 metaLine: infoMetaLine,
                 badges: infoBadges,
+                streamDetails: infoSnapshot.streamDetails,
                 posterURL: media.posterURL,
                 primaryAction: infoPrimaryAction,
                 secondaryAction: nil,

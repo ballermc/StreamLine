@@ -398,6 +398,7 @@
         var synopsis: String?
         var metaLine: String?
         var badges: [String]
+        var streamDetails: [String] = []
         var posterURL: URL?
         var primaryAction: TVPlayerInfoAction?
         var secondaryAction: TVPlayerInfoAction?
@@ -408,10 +409,8 @@
             HStack(alignment: .top, spacing: 36) {
                 artwork
                 details
-                if primaryAction != nil || secondaryAction != nil {
-                    actions
-                        .frame(width: 380)
-                }
+                actions
+                    .frame(width: 380)
             }
             .padding(28)
             .background(
@@ -484,6 +483,21 @@
                     }
                     .padding(.top, 4)
                 }
+
+                if !streamDetails.isEmpty {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Stream Information")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                        ForEach(streamDetails, id: \.self) { detail in
+                            Text(detail)
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.85))
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.top, 5)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -504,6 +518,11 @@
                     .buttonStyle(TVGlassButtonStyle())
                     .focused(focus, equals: .infoSecondary)
                 }
+                Button(action: onClose) {
+                    Label("Done", systemImage: "xmark")
+                }
+                .buttonStyle(TVGlassButtonStyle())
+                .focused(focus, equals: .panelClose)
             }
         }
 

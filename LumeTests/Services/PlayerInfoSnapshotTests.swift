@@ -46,7 +46,8 @@ private let detailedVideoInfo = PlayerVideoInfo(
     height: 1080,
     fps: 60,
     codec: "h264",
-    audioInfo: PlayerAudioInfo(codec: "aac", channels: 2, sampleRate: 48_000)
+    audioInfo: PlayerAudioInfo(codec: "aac", channels: 2, sampleRate: 48_000),
+    bitrateKbps: 6_500
 )
 
 /// AVPlayer's real-world shape: dimensions only, never a codec or a frame rate.
@@ -270,14 +271,36 @@ struct PlayerVideoInfoCaptionTests {
     @Test(.enabled(if: isEnglishHost()))
     func `advanced parts include audio codec channels and sample rate`() {
         #expect(detailedVideoInfo.captionParts == [
-            "1080p", "H264", "60 fps", "AAC", "2 ch", "48,000 Hz"
+            "1080p", "H264", "60 fps", "AAC", "Stereo", "48,000 Hz"
         ])
     }
 
     @Test(.enabled(if: isEnglishHost()))
     func `spoken parts include audio details`() {
         #expect(detailedVideoInfo.spokenCaptionParts == [
-            "1080p", "H264", "60 frames per second", "AAC", "2 audio channels", "48,000 hertz"
+            "1080p", "H264", "60 frames per second", "AAC", "Stereo audio", "48,000 hertz"
+        ])
+    }
+
+    @Test(.enabled(if: isEnglishHost()))
+    func `stream details format video audio and bitrate`() {
+        let snapshot = PlayerInfoSnapshot(
+            media: liveMedia,
+            details: nil,
+            videoInfo: detailedVideoInfo,
+            engine: .vlcKit,
+            detailLevel: .simple
+        )
+
+        #expect(snapshot.streamDetails == [
+            "Resolution: 1920 × 1080",
+            "Quality: 1080p",
+            "Video: H264",
+            "Frame rate: 60 fps",
+            "Bitrate: 6.5 Mbps",
+            "Audio: AAC",
+            "Audio channels: Stereo",
+            "Sample rate: 48,000 Hz"
         ])
     }
 }
