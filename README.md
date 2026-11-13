@@ -1,5 +1,7 @@
 <div align="center">
 
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?logo=discord&logoColor=white)](https://discord.gg/ArY65dRKRJ)
+
 ### StreamLine — a modern, native IPTV player for Apple platforms
 
 StreamLine is a fork of [Lume](https://github.com/bilipp/Lume), continuing its
@@ -8,6 +10,7 @@ open-source IPTV player for Apple platforms under a new name.
 Browse, search, and stream your Xtream Codes or **M3U/M3U8** playlists with a clean SwiftUI interface — Live TV, Movies, and Series, enriched with metadata, EPG, and watch progress that follows you across your devices.
 
 [![App Store](https://img.shields.io/badge/Download-App%20Store-0A84FF?logo=apple&logoColor=white&labelColor=1f1f2e)](https://apps.apple.com/us/app/lume-iptv-player/id6779551584)
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?logo=discord&logoColor=white)](https://discord.gg/ArY65dRKRJ)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20·%20iPadOS%20·%20macOS%20·%20tvOS%20·%20visionOS-1f1f2e?labelColor=1f1f2e)](#supported-platforms)
 [![Swift](https://img.shields.io/badge/Swift-5.x-F05138?logo=swift&logoColor=white)](https://swift.org)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0A84FF)](https://developer.apple.com/xcode/swiftui/)
