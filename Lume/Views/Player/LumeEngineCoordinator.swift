@@ -525,7 +525,14 @@ final class LumeEngineCoordinator: NSObject, ObservableObject {
             width: video.width,
             height: video.height,
             fps: video.fps,
-            codec: track.codecName
+            codec: track.codecName,
+            audioInfo: info.audioTracks.first.map {
+                PlayerAudioInfo(
+                    codec: $0.codecName,
+                    channels: Int($0.audio?.channels ?? 0),
+                    sampleRate: Double($0.audio?.sampleRate ?? 0)
+                )
+            }
         )
     }
 

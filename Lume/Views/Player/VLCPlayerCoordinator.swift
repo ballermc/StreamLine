@@ -359,7 +359,16 @@ final class VLCPlayerCoordinator: NSObject, ObservableObject {
         }
 
         let info = (width > 0 && height > 0)
-            ? PlayerVideoInfo(width: width, height: height, fps: fps, codec: codec)
+            ? PlayerVideoInfo(
+                width: width,
+                height: height,
+                fps: fps,
+                codec: codec,
+                audioInfo: mediaPlayer.audioTracks.first.map {
+                    let name = $0.codecName()
+                    return PlayerAudioInfo(codec: name.isEmpty ? nil : name, channels: 0, sampleRate: 0)
+                }
+            )
             : nil
         if info != videoInfo { videoInfo = info }
     }

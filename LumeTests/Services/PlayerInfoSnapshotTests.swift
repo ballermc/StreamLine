@@ -41,6 +41,13 @@ private let fullDetails = StreamInfoDetails(
 )
 
 private let uhdVideoInfo = PlayerVideoInfo(width: 3840, height: 2160, fps: 24, codec: "hevc")
+private let detailedVideoInfo = PlayerVideoInfo(
+    width: 1920,
+    height: 1080,
+    fps: 60,
+    codec: "h264",
+    audioInfo: PlayerAudioInfo(codec: "aac", channels: 2, sampleRate: 48_000)
+)
 
 /// AVPlayer's real-world shape: dimensions only, never a codec or a frame rate.
 /// `FullScreenPlayerView.isAirPlayOverride` forces this engine during a cast, so
@@ -258,5 +265,19 @@ struct PlayerVideoInfoCaptionTests {
     func `spoken parts spell out the frame rate`() {
         let info = PlayerVideoInfo(width: 3840, height: 2160, fps: 24, codec: "hevc")
         #expect(info.spokenCaptionParts == ["4K", "HEVC", "24 frames per second"])
+    }
+
+    @Test(.enabled(if: isEnglishHost()))
+    func `advanced parts include audio codec channels and sample rate`() {
+        #expect(detailedVideoInfo.captionParts == [
+            "1080p", "H264", "60 fps", "AAC", "2 ch", "48,000 Hz"
+        ])
+    }
+
+    @Test(.enabled(if: isEnglishHost()))
+    func `spoken parts include audio details`() {
+        #expect(detailedVideoInfo.spokenCaptionParts == [
+            "1080p", "H264", "60 frames per second", "AAC", "2 audio channels", "48,000 hertz"
+        ])
     }
 }

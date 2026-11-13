@@ -87,7 +87,7 @@ nonisolated enum PlayerEngineKind: String, CaseIterable, Identifiable {
 /// How much the in-player stream-information caption spells out. A two-level
 /// preset rather than per-element toggles: Simple carries programme context
 /// (playlist, EPG), Advanced adds the technical
-/// readout (quality, codec, frame rate, engine).
+/// readout (quality, video/audio codecs, frame rate, audio details, engine).
 nonisolated enum StreamInfoDetailLevel: String, CaseIterable, Identifiable {
     case simple
     case advanced
@@ -106,7 +106,8 @@ nonisolated enum StreamInfoDetailLevel: String, CaseIterable, Identifiable {
     var footer: LocalizedStringResource {
         switch self {
         case .simple: "Shows the playlist and what's on now."
-        case .advanced: "Adds the technical readout: quality, codec, frame rate, and playback engine."
+        case .advanced:
+            "Adds the technical readout: quality, video/audio codecs, frame rate, audio details, and playback engine."
         }
     }
 }

@@ -14,9 +14,9 @@ import CoreMedia
 import KSPlayer
 
 enum KSVideoInfo {
-    /// Resolution / frame rate / codec of the layer's first video track, or
-    /// `nil` while no track carries usable dimensions (the first seconds of
-    /// every stream, and audio-only sources).
+    /// Resolution / frame rate / codec of the layer's first video track plus
+    /// the first audio track's codec, channel count, and sample rate, or `nil`
+    /// while no track carries usable dimensions.
     static func resolve(from layer: KSPlayerLayer?) -> PlayerVideoInfo? {
         guard let track = layer?.player.tracks(mediaType: .video).first else { return nil }
 
@@ -28,9 +28,30 @@ enum KSVideoInfo {
             height = Int(dims.height)
         }
         let fps = track.nominalFrameRate > 0 ? Double(track.nominalFrameRate) : 0
+        let audioInfo = layer?.player.tracks(mediaType: .audio).first.flatMap { audioInfo(for: $0) }
         return (width > 0 && height > 0)
-            ? PlayerVideoInfo(width: width, height: height, fps: fps, codec: codecName(for: track))
+            ? PlayerVideoInfo(
+                width: width,
+                height: height,
+                fps: fps,
+                codec: codecName(for: track),
+                audioInfo: audioInfo
+            )
             : nil
+    }
+
+    private static func audioInfo(for track: some MediaPlayerTrack) -> PlayerAudioInfo? {
+        let codec = codecName(for: track)
+        var channels = 0
+        var sampleRate = 0.0
+        if let format = track.formatDescription,
+           let streamDescription = CMAudioFormatDescriptionGetStreamBasicDescription(format)?.pointee
+        {
+            channels = Int(streamDescription.mChannelsPerFrame)
+            sampleRate = streamDescription.mSampleRate
+        }
+        guard codec != nil || channels > 0 || sampleRate > 0 else { return nil }
+        return PlayerAudioInfo(codec: codec, channels: channels, sampleRate: sampleRate)
     }
 
     // MARK: - Codec naming

@@ -74,7 +74,8 @@ struct PlayerInfoSnapshot: Equatable {
         return parts.isEmpty ? nil : parts.joined(separator: Self.separator)
     }
 
-    /// The right-aligned technical readout, e.g. `4K  ·  H264  ·  24 fps`.
+    /// The right-aligned technical readout, e.g. `4K  ·  H264  ·  24 fps  ·
+    /// AAC  ·  2 ch  ·  48,000 Hz`.
     /// Empty at `.simple`, and while no video track has reported usable
     /// dimensions yet.
     var techCaption: String {

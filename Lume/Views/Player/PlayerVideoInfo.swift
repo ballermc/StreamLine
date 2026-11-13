@@ -26,6 +26,7 @@ nonisolated struct PlayerVideoInfo: Equatable {
     let height: Int
     let fps: Double
     let codec: String?
+    let audioInfo: PlayerAudioInfo? = nil
 
     /// A short marketing-style quality tag derived from the pixel width.
     ///
@@ -52,6 +53,7 @@ nonisolated struct PlayerVideoInfo: Equatable {
         if let frameRateText {
             parts.append(String(localized: "\(frameRateText) fps"))
         }
+        parts.append(contentsOf: audioInfo?.captionParts ?? [])
         return parts
     }
 
@@ -62,6 +64,7 @@ nonisolated struct PlayerVideoInfo: Equatable {
         if let frameRateText {
             parts.append(String(localized: "\(frameRateText) frames per second"))
         }
+        parts.append(contentsOf: audioInfo?.spokenCaptionParts ?? [])
         return parts
     }
 
@@ -84,6 +87,48 @@ nonisolated struct PlayerVideoInfo: Equatable {
         let rounded = (fps * 100).rounded() / 100
         let places = rounded.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 2
         return rounded.formatted(.number.precision(.fractionLength(places)))
+    }
+}
+
+nonisolated struct PlayerAudioInfo: Equatable {
+    let codec: String?
+    let channels: Int
+    let sampleRate: Double
+
+    var captionParts: [String] {
+        var parts: [String] = []
+        if let codec, !codec.isEmpty {
+            parts.append(codec.uppercased())
+        }
+        if channels > 0 {
+            parts.append(String(localized: "\(channels) ch"))
+        }
+        if sampleRate > 0 {
+            let rounded = sampleRate.rounded()
+            let value = rounded == sampleRate
+                ? rounded.formatted()
+                : sampleRate.formatted(.number.precision(.fractionLength(1)))
+            parts.append(String(localized: "\(value) Hz"))
+        }
+        return parts
+    }
+
+    var spokenCaptionParts: [String] {
+        var parts: [String] = []
+        if let codec, !codec.isEmpty {
+            parts.append(codec.uppercased())
+        }
+        if channels > 0 {
+            parts.append(String(localized: "\(channels) audio channels"))
+        }
+        if sampleRate > 0 {
+            let rounded = sampleRate.rounded()
+            let value = rounded == sampleRate
+                ? rounded.formatted()
+                : sampleRate.formatted(.number.precision(.fractionLength(1)))
+            parts.append(String(localized: "\(value) hertz"))
+        }
+        return parts
     }
 }
 

@@ -447,7 +447,19 @@
                 textTrackOptions = textOptions
             }
             if let info = session.videoInfo {
-                let published = PlayerVideoInfo(width: info.width, height: info.height, fps: info.frameRate ?? 0, codec: info.codec)
+                let published = PlayerVideoInfo(
+                    width: info.width,
+                    height: info.height,
+                    fps: info.frameRate ?? 0,
+                    codec: info.codec,
+                    audioInfo: session.audioTracks.first.map {
+                        PlayerAudioInfo(
+                            codec: $0.codec,
+                            channels: Int($0.channels),
+                            sampleRate: Double($0.sampleRate)
+                        )
+                    }
+                )
                 if published != videoInfo {
                     videoInfo = published
                 }
