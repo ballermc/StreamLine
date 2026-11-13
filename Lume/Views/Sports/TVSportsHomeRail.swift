@@ -140,30 +140,30 @@ import SwiftUI
                 Button {
                     showManageTeams = true
                 } label: {
-                    HStack(spacing: 20) {
+                    HStack(spacing: 14) {
                         Image(systemName: "sportscourt.fill")
-                            .font(.largeTitle)
+                            .font(.title2.weight(.semibold))
                             .foregroundStyle(.white)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Follow Your Teams")
-                                .font(.title3.weight(.semibold))
+                                .font(.headline.weight(.semibold))
                                 .foregroundStyle(.white)
                             Text("Add leagues and teams to see fixtures, live scores and standings, with one tap to the channel carrying the game.")
-                                .font(.callout)
+                                .font(.caption)
                                 .foregroundStyle(.white.opacity(0.6))
                                 .lineLimit(2)
                         }
                         Spacer(minLength: 12)
                         Image(systemName: "chevron.forward")
-                            .font(.title3.weight(.bold))
+                            .font(.headline.weight(.bold))
                             .foregroundStyle(.white.opacity(0.6))
                             .accessibilityHidden(true)
                     }
-                    .padding(28)
+                    .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.white.opacity(0.08))
+                        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.white.opacity(0.08))
                     )
                 }
                 .buttonStyle(TVCardButtonStyle(focusScale: 1.03))
